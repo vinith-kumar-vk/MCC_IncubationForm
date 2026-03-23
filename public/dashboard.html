@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard – MCC Certificate</title>
+  <meta name="description" content="MCC-MRF Innovation Park Admin Dashboard"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/dashboard.css"/>
+</head>
+<body>
+
+<!-- ──── SIDEBAR ──── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo">
+      <img src="/images/logo.png" alt="Logo" width="40" height="40" style="background:#fff; border-radius:8px; padding:2px; box-shadow:0 4px 10px rgba(0,0,0,0.15)"/>
+    </div>
+    <div class="sb-brand-info">
+      <div class="sb-brand-name">MCC - MRF</div>
+      <div class="sb-brand-sub">INNOVATION PARK</div>
+      <div class="sb-brand-location">Madras Christian College</div>
+    </div>
+  </div>
+
+  <div class="sb-divider"></div>
+
+  <div class="sb-title">
+    <span>MCC Certificate</span>
+    <small>Admin Dashboard</small>
+  </div>
+
+  <nav class="sb-nav">
+    <a href="#" class="sb-nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="#" class="sb-nav-item" onclick="showPage('applications')" id="nav-applications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <span>Users</span>
+    </a>
+    <a href="#" class="sb-nav-item" onclick="showPage('approved')" id="nav-approved">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Certificates</span>
+    </a>
+    <a href="#" class="sb-nav-item" onclick="showPage('activity')" id="nav-activity">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Activity Logs</span>
+    </a>
+    <a href="#" class="sb-nav-item" onclick="showPage('sessions')" id="nav-sessions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Sessions</span>
+    </a>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-user-avatar" id="sbAvatar">M</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sbUsername">mccmrfadmin</div>
+        <div class="sb-user-role">Administrator</div>
+      </div>
+    </div>
+    <button class="sb-logout-btn" onclick="handleLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Logout</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Container -->
+<main class="main-content">
+
+  <!-- ── PAGE: DASHBOARD ── -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <h1 class="page-title">Dashboard Overview</h1>
+      <p class="page-subtitle">Welcome back! Here's what's happening with your certificate system.</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon icon-users">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="stat-text">
+          <div class="stat-label">TOTAL USERS</div>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-students">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="stat-text">
+          <div class="stat-label">STUDENTS</div>
+          <div class="stat-value" id="stat-students">0</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-staff">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        </div>
+        <div class="stat-text">
+          <div class="stat-label">STAFF</div>
+          <div class="stat-value" id="stat-staff">0</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-certs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="stat-text">
+          <div class="stat-label">CERTIFICATES</div>
+          <div class="stat-value" id="stat-certs">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Users Table -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <h2 class="table-title">Recent Users</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>NAME</th>
+              <th>TYPE</th>
+              <th>EMAIL</th>
+              <th>JOINED</th>
+            </tr>
+          </thead>
+          <tbody id="recentTbody">
+            <tr><td colspan="4" class="table-empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: USERS (Applications) ── -->
+  <div class="page" id="page-applications">
+    <div class="page-header">
+      <h1 class="page-title">Users Management</h1>
+      <p class="page-subtitle">View and manage all system users and applicants.</p>
+    </div>
+    <div class="table-card">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>NAME</th>
+              <th>TYPE</th>
+              <th>EMAIL</th>
+              <th>STATUS</th>
+              <th>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="allUsersTbody">
+            <tr><td colspan="5" class="table-empty">No users found.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Application Detail</h2>
+      <button class="close-btn" onclick="closeDetailModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Content here -->
+    </div>
+  </div>
+</div>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>

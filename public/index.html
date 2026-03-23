@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Application Form for Incubation @ MCCMRFIP</title>
+  <meta name="description" content="Apply for incubation at MCC-MRF Innovation Park. Submit your startup application online."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/form.css"/>
+</head>
+<body>
+  <div class="gf-page">
+
+    <!-- Top accent bar -->
+    <div class="gf-top-bar"></div>
+
+    <!-- Header Card -->
+    <div class="gf-card gf-header-card">
+      <div class="gf-logo-row">
+        <div class="mcc-logo-wrap">
+          <img src="/images/logo.png" alt="MCC Logo" width="72" height="72" style="background:#fff; border-radius:10px; padding:2px; box-shadow:0 4px 10px rgba(0,0,0,0.1)"/>
+        </div>
+        <div class="mcc-title-block">
+          <div class="mcc-line1">MCC <span class="mcc-dash">·</span> <span class="mrf-red">MRF</span></div>
+          <div class="mcc-line2">INNOVATION PARK</div>
+          <div class="mcc-line3">Madras Christian College</div>
+        </div>
+      </div>
+      <div class="gf-divider-red"></div>
+      <h1 class="gf-form-title">Application form for Incubation @ MCCMRFIP</h1>
+      <div class="gf-form-desc">
+        <p>Are you working on solving the real world problem by bringing an idea to life from your university?</p>
+        <p>Please fill in the form below with information about your startup/idea. For any queries, please write to us at <a href="mailto:incubation@mcc.edu.in" class="gf-link">Incubation@mcc.edu.in</a></p>
+        <p>For any technical issues while filling the form, please email us at <a href="mailto:mccmrfip@gmail.com" class="gf-link">mccmrfip@gmail.com</a></p>
+      </div>
+      <div class="gf-email-row">
+        <span class="gf-icon">✉</span>
+        <span class="gf-email-text">vinithkumar78877@gmail.com</span>
+        <a href="#" class="gf-switch-link">Switch account</a>
+        <span class="gf-share-icon" title="Share">⤴</span>
+      </div>
+      <div class="gf-required-note">* Indicates required question</div>
+    </div>
+
+    <!-- Form Card -->
+    <form id="incubationForm" method="POST" enctype="multipart/form-data" novalidate>
+
+      <!-- Name of Applicant -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Name of Applicant <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="applicant_name" id="applicant_name" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_applicant_name"></span>
+      </div>
+
+      <!-- Name of Startup -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Name of Startup / Proposed Name of Start up <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="startup_name" id="startup_name" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_startup_name"></span>
+      </div>
+
+      <!-- Address -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Address/Contact <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="address" id="address" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_address"></span>
+      </div>
+
+      <!-- Email -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Email ID <span class="gf-req">*</span></label>
+        <input type="email" class="gf-input" name="email" id="email" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_email"></span>
+      </div>
+
+      <!-- WhatsApp -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Whatsapp Number <span class="gf-req">*</span></label>
+        <input type="tel" class="gf-input" name="whatsapp" id="whatsapp" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_whatsapp"></span>
+      </div>
+
+      <!-- Professional Status -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Current Professional Status <span class="gf-hint">(To be filled by Students/Dropouts/First year at MCC)</span></label>
+        <input type="text" class="gf-input" name="professional_status" id="professional_status" placeholder="Your answer"/>
+        <div class="gf-field-line"></div>
+      </div>
+
+      <!-- Startup Description + File Upload -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Briefly describe your startup or idea / Tell us about the problem you are solving and what you propose to solve with your startup idea. Please be as detailed as possible when describing the problem and proposed solution. You may also include a pitchdeck or business plan if available. <span class="gf-req">*</span></label>
+        <textarea class="gf-input gf-textarea" name="startup_description" id="startup_description" placeholder="Your answer" required rows="5"></textarea>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_startup_description"></span>
+        <div class="gf-file-upload" id="fileUploadZone">
+          <label for="startup_file" class="gf-file-label">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Add File
+          </label>
+          <input type="file" id="startup_file" name="startup_file" class="gf-file-input" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"/>
+          <span class="gf-file-name" id="fileName">No file chosen</span>
+        </div>
+      </div>
+
+      <!-- Plan to grow -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Do you have plans to grow your Startup? <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="plan_to_grow" id="plan_to_grow" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_plan_to_grow"></span>
+      </div>
+
+      <!-- Services Needed (Checkboxes) -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Please specify the incubation services you need from MCC-MRF Innovation Park <span class="gf-req">*</span></label>
+        <div class="gf-checkbox-group" id="services_group">
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="services_needed" value="Office Space"/> Office Space
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="services_needed" value="Work Space"/> Work Space
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="services_needed" value="Space (Incubation)"/> Space (Incubation)
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="services_needed" value="Staffing / Networking of Mentor"/> Staffing / Networking of Mentor
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="services_needed" value="Talk / Discussion / Idea Brainstorming"/> Talk / Discussion / Idea Brainstorming
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="services_needed" value="Funding Support"/> Funding Support
+          </label>
+        </div>
+        <span class="gf-error" id="err_services"></span>
+      </div>
+
+      <!-- How connected -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">How are you looking forward to the support of the Incubation given to you for your AI? <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="how_connected" id="how_connected" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_how_connected"></span>
+      </div>
+
+      <!-- Dialog Approach -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">How would going about starting the dialog with them, show more details? <span class="gf-req">*</span></label>
+        <textarea class="gf-input gf-textarea" name="dialog_approach" id="dialog_approach" placeholder="Your answer" required rows="4"></textarea>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_dialog_approach"></span>
+      </div>
+
+      <!-- Reason -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">For what reasons did you bring your startup to incubate yourself? <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="reason_to_incubate" id="reason_to_incubate" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_reason_to_incubate"></span>
+      </div>
+
+      <!-- Contributor -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Who would be willing to contribute to the MCCMRFIP for you? <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="contributor" id="contributor" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_contributor"></span>
+      </div>
+
+      <!-- Success Establishing -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">Could this success in establishing and building into startup success? <span class="gf-req">*</span></label>
+        <input type="text" class="gf-input" name="success_establishing" id="success_establishing" placeholder="Your answer" required/>
+        <div class="gf-field-line"></div>
+        <span class="gf-error" id="err_success_establishing"></span>
+      </div>
+
+      <!-- Declaration -->
+      <div class="gf-card gf-field-card">
+        <label class="gf-label">I certify the details provided in this form are true to the best of my knowledge. <span class="gf-req">*</span></label>
+        <p class="gf-declaration-text">Please read and agree to all of the following statements:</p>
+        <div class="gf-checkbox-group">
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="declaration_agreed" id="decl1" value="1"/>
+            I confirm that all the information provided in this application is accurate, complete, and truthful to the best of my knowledge.
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="decl2" id="decl2" value="1"/>
+            I understand that submission of false information may lead to disqualification of my application.
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="decl3" id="decl3" value="1"/>
+            I acknowledge that MCC-MRF Innovation Park reserves the right to verify the information provided and seek clarifications.
+          </label>
+          <label class="gf-checkbox-row">
+            <input type="checkbox" name="decl4" id="decl4" value="1"/>
+            I agree to abide by the rules and regulations of MCC-MRF Innovation Park if selected for incubation.
+          </label>
+        </div>
+        <span class="gf-error" id="err_declaration"></span>
+      </div>
+
+      <!-- Submit Row -->
+      <div class="gf-submit-row">
+        <button type="submit" class="gf-submit-btn" id="submitBtn">Submit</button>
+        <button type="reset" class="gf-clear-btn" id="clearBtn">Clear form</button>
+      </div>
+
+      <div class="gf-footer">
+        <p>Never submit passwords through Google Forms.</p>
+        <p>This form was created inside of <strong>Madras Christian College</strong>. <a href="#" class="gf-link">Report Abuse</a></p>
+        <div class="gf-google-forms-brand">
+          <span>Google Forms</span>
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+
+  <!-- Success Modal -->
+  <div class="gf-modal-overlay" id="successModal">
+    <div class="gf-modal">
+      <div class="gf-modal-icon">✓</div>
+      <h2>Application Submitted!</h2>
+      <p>Thank you for applying to MCC-MRF Innovation Park Incubation Programme. We will review your application and get back to you soon.</p>
+      <button class="gf-submit-btn" onclick="closeModal()">Submit another response</button>
+    </div>
+  </div>
+
+  <script src="js/form.js"></script>
+</body>
+</html>
