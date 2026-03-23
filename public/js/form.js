@@ -1,49 +1,120 @@
-// form.js - MCC-MRF Incubation Form Logic
+// form.js - MCC-MRF Ultra-Premium Multi-Step Logic
 
 document.addEventListener('DOMContentLoaded', () => {
+  let currentStep = 1;
+  const totalSteps = 4;
+
+  const form = document.getElementById('incubationForm');
+  const steps = document.querySelectorAll('.form-step');
+  const nextBtn = document.getElementById('nextBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const progressBar = id('progressBar');
+  const currentStepText = id('currentStepText');
+  const navItems = document.querySelectorAll('.nav-item');
+
+  // Utility to get element by ID
+  function id(name) { return document.getElementById(name); }
+
+  // Step Navigation Logic
+  function updateStep() {
+    steps.forEach((step, idx) => {
+      step.classList.toggle('active', idx + 1 === currentStep);
+      step.classList.toggle('d-none', idx + 1 !== currentStep);
+    });
+
+    navItems.forEach((item, idx) => {
+      item.classList.toggle('active', idx + 1 === currentStep);
+      item.classList.toggle('completed', idx + 1 < currentStep);
+    });
+
+    // Buttons visibility
+    prevBtn.classList.toggle('d-none', currentStep === 1);
+    
+    if (currentStep === totalSteps) {
+      nextBtn.classList.add('d-none');
+      submitBtn.classList.remove('d-none');
+    } else {
+      nextBtn.classList.remove('d-none');
+      submitBtn.classList.add('d-none');
+    }
+
+    // Progress
+    const progressPercent = (currentStep / totalSteps) * 100;
+    progressBar.style.width = `${progressPercent}%`;
+    currentStepText.textContent = currentStep;
+
+    // Update Header Breadcrumb Label
+    const stepLabels = [
+      "Bio & Contact",
+      "Startup Vision",
+      "Incubation Support",
+      "Final Confirmation"
+    ];
+    id('currentStepLabel').textContent = stepLabels[currentStep - 1];
+
+    // Scroll top
+    document.querySelector('.form-container-scroll').scrollTop = 0;
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateStep();
+      }
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStep();
+    }
+  });
+
+  // Sidebar clicking (only for completed or current steps)
+  navItems.forEach((item, idx) => {
+    item.addEventListener('click', () => {
+      const targetStep = idx + 1;
+      if (targetStep < currentStep || validateStep(currentStep)) {
+        currentStep = targetStep;
+        updateStep();
+      }
+    });
+  });
 
   // File upload display
-  const fileInput = document.getElementById('startup_file');
-  const fileName = document.getElementById('fileName');
-  const fileZone = document.getElementById('fileUploadZone');
+  const fileInput = id('startup_file');
+  const fileName = id('fileName');
+  const fileZone = id('fileUploadZone');
 
-  if (fileInput && fileName) {
+  if (fileInput && fileZone) {
+    fileZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', () => {
       fileName.textContent = fileInput.files[0] ? fileInput.files[0].name : 'No file chosen';
     });
   }
 
-  if (fileZone && fileInput) {
-    fileZone.addEventListener('click', (e) => {
-      // Don't trigger if we clicked the actual input or label just to be safe
-      if (e.target !== fileInput) {
-        fileInput.click();
-      }
-    });
-  }
+  // Clear form
+  id('clearBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (confirm('Clear all fields and restart?')) {
+      form.reset();
+      fileName.textContent = 'No file chosen';
+      currentStep = 1;
+      clearAllErrors();
+      updateStep();
+    }
+  });
 
-  // Clear form button
-  const clearBtn = document.getElementById('clearBtn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (confirm('Are you sure you want to clear all form fields?')) {
-        document.getElementById('incubationForm').reset();
-        if (fileName) fileName.textContent = 'No file chosen';
-        clearAllErrors();
-      }
-    });
-  }
-
-  // Form submit
-  const form = document.getElementById('incubationForm');
+  // Form final submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateStep(4)) return;
 
-    const submitBtn = document.getElementById('submitBtn');
     submitBtn.classList.add('loading');
-    submitBtn.textContent = 'Submitting...';
+    submitBtn.textContent = 'Processing...';
 
     try {
       const formData = new FormData(form);
@@ -54,100 +125,101 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await response.json();
 
       if (result.success) {
+        id('successModal').classList.add('active');
         form.reset();
-        if (fileName) fileName.textContent = 'No file chosen';
-        document.getElementById('successModal').classList.add('active');
       } else {
-        alert(result.message || 'Submission failed. Please try again.');
+        alert(result.message || 'Submission failed.');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error. Please check your connection and try again.');
+      alert('Network error.');
     } finally {
       submitBtn.classList.remove('loading');
-      submitBtn.textContent = 'Submit';
+      submitBtn.textContent = 'Finish & Submit';
     }
   });
+
+  function validateStep(stepNum) {
+    clearAllErrors();
+    let isValid = true;
+    
+    const stepFields = {
+      1: [
+        { id: 'applicant_name', msg: 'Name is required' },
+        { id: 'email', msg: 'Valid email required', type: 'email' },
+        { id: 'whatsapp', msg: 'WhatsApp is required' },
+        { id: 'address', msg: 'Address is required' }
+      ],
+      2: [
+        { id: 'startup_name', msg: 'Startup name is required' },
+        { id: 'startup_description', msg: 'Description is required' },
+        { id: 'plan_to_grow', msg: 'Growth plan is required' }
+      ],
+      3: [
+        { id: 'how_connected', msg: 'Required field' },
+        { id: 'dialog_approach', msg: 'Required field' },
+        { id: 'reason_to_incubate', msg: 'Required field' },
+        { id: 'contributor', msg: 'Required field' },
+        { id: 'success_establishing', msg: 'Required field' }
+      ],
+      4: [
+        { id: 'decl1', msg: 'Must accept all declarations', type: 'checkbox' },
+        { id: 'decl2', msg: '', type: 'checkbox' },
+        { id: 'decl3', msg: '', type: 'checkbox' },
+        { id: 'decl4', msg: '', type: 'checkbox' }
+      ]
+    };
+
+    const currentFields = stepFields[stepNum] || [];
+    currentFields.forEach(f => {
+      const el = id(f.id);
+      if (!el) return;
+      
+      if (f.type === 'checkbox') {
+        if (!el.checked) {
+          isValid = false;
+          showError('err_declaration', f.msg || 'Please accept all terms.');
+        }
+      } else {
+        const val = el.value.trim();
+        if (!val) {
+          isValid = false;
+          showError(`err_${f.id}`, f.msg);
+          el.classList.add('error');
+        } else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+          isValid = false;
+          showError(`err_${f.id}`, 'Invalid email address');
+          el.classList.add('error');
+        }
+      }
+    });
+
+    if (stepNum === 3) {
+      const checked = document.querySelectorAll('input[name="services_needed"]:checked');
+      if (checked.length === 0) {
+        isValid = false;
+        showError('err_services', 'Select at least one service');
+      }
+    }
+
+    return isValid;
+  }
+
+  function showError(targetId, msg) {
+    const el = id(targetId);
+    if (el) el.textContent = msg;
+  }
+
+  function clearAllErrors() {
+    document.querySelectorAll('.error-msg').forEach(e => e.textContent = '');
+    document.querySelectorAll('.premium-input').forEach(e => e.classList.remove('error'));
+  }
+
+  // Initial call
+  updateStep();
 });
-
-function validateForm() {
-  clearAllErrors();
-  let isValid = true;
-
-  const required = [
-    { id: 'applicant_name',     errId: 'err_applicant_name',     msg: 'Please enter your name.' },
-    { id: 'startup_name',       errId: 'err_startup_name',       msg: 'Please enter the startup name.' },
-    { id: 'address',            errId: 'err_address',            msg: 'Please enter your address/contact.' },
-    { id: 'email',              errId: 'err_email',              msg: 'Please enter a valid email.', type: 'email' },
-    { id: 'whatsapp',           errId: 'err_whatsapp',           msg: 'Please enter your WhatsApp number.' },
-    { id: 'startup_description',errId: 'err_startup_description',msg: 'Please describe your startup idea.' },
-    { id: 'plan_to_grow',       errId: 'err_plan_to_grow',       msg: 'Please answer this question.' },
-    { id: 'how_connected',      errId: 'err_how_connected',      msg: 'Please answer this question.' },
-    { id: 'dialog_approach',    errId: 'err_dialog_approach',    msg: 'Please answer this question.' },
-    { id: 'reason_to_incubate', errId: 'err_reason_to_incubate', msg: 'Please answer this question.' },
-    { id: 'contributor',        errId: 'err_contributor',        msg: 'Please answer this question.' },
-    { id: 'success_establishing',errId:'err_success_establishing',msg: 'Please answer this question.' },
-  ];
-
-  required.forEach(({ id, errId, msg, type }) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const val = el.value.trim();
-    if (!val) {
-      showError(errId, msg);
-      el.classList.add('error');
-      isValid = false;
-    } else if (type === 'email' && !isValidEmail(val)) {
-      showError(errId, 'Please enter a valid email address.');
-      el.classList.add('error');
-      isValid = false;
-    }
-  });
-
-  // Checkboxes - at least one service
-  const services = document.querySelectorAll('input[name="services_needed"]:checked');
-  if (services.length === 0) {
-    showError('err_services', 'Please select at least one service.');
-    isValid = false;
-  }
-
-  // Declaration
-  const decl1 = document.getElementById('decl1');
-  if (!decl1 || !decl1.checked) {
-    showError('err_declaration', 'You must agree to the declaration to submit.');
-    isValid = false;
-  }
-
-  if (!isValid) {
-    // Scroll to first error
-    const firstErr = document.querySelector('.gf-error:not(:empty), .error');
-    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  return isValid;
-}
-
-function showError(id, msg) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = msg;
-}
-
-function clearAllErrors() {
-  document.querySelectorAll('.gf-error').forEach(el => el.textContent = '');
-  document.querySelectorAll('.gf-input.error').forEach(el => el.classList.remove('error'));
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 function closeModal() {
   document.getElementById('successModal').classList.remove('active');
+  window.location.reload();
 }
-
-// Remove error on input
-document.addEventListener('input', (e) => {
-  if (e.target.classList.contains('gf-input')) {
-    e.target.classList.remove('error');
-  }
-});
