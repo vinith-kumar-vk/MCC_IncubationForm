@@ -40,15 +40,14 @@ db.exec(`
     email TEXT NOT NULL,
     whatsapp TEXT NOT NULL,
     professional_status TEXT,
-    startup_description TEXT,
+    file_path TEXT,
     plan_to_grow TEXT,
     services_needed TEXT,
-    how_connected TEXT,
-    dialog_approach TEXT,
-    reason_to_incubate TEXT,
-    contributor TEXT,
-    success_establishing TEXT,
-    file_path TEXT,
+    financial_support TEXT,
+    incubation_support TEXT,
+    incubation_duration TEXT,
+    association_type TEXT,
+    incubation_help TEXT,
     status TEXT DEFAULT 'Pending',
     declaration_agreed INTEGER DEFAULT 0,
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -86,9 +85,9 @@ app.post('/api/apply', upload.single('startup_file'), (req, res) => {
   try {
     const {
       applicant_name, startup_name, address, email, whatsapp,
-      professional_status, startup_description, plan_to_grow,
-      how_connected, dialog_approach, reason_to_incubate,
-      contributor, success_establishing, declaration_agreed
+      professional_status, plan_to_grow, financial_support,
+      incubation_support, incubation_duration, association_type,
+      incubation_help, declaration_agreed
     } = req.body;
 
     const services_needed = Array.isArray(req.body.services_needed)
@@ -100,13 +99,13 @@ app.post('/api/apply', upload.single('startup_file'), (req, res) => {
     db.prepare(`
       INSERT INTO applications
       (applicant_name, startup_name, address, email, whatsapp, professional_status,
-       startup_description, plan_to_grow, services_needed, how_connected, dialog_approach,
-       reason_to_incubate, contributor, success_establishing, file_path, declaration_agreed)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       plan_to_grow, services_needed, financial_support, incubation_support,
+       incubation_duration, association_type, incubation_help, file_path, declaration_agreed)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       applicant_name, startup_name, address, email, whatsapp, professional_status,
-      startup_description, plan_to_grow, services_needed, how_connected, dialog_approach,
-      reason_to_incubate, contributor, success_establishing, file_path,
+      plan_to_grow, services_needed, financial_support, incubation_support,
+      incubation_duration, association_type, incubation_help, file_path,
       declaration_agreed ? 1 : 0
     );
 
@@ -155,30 +154,36 @@ app.get('/api/stats', requireAuth, (req, res) => {
 
 // Get all applications
 app.get('/api/applications', requireAuth, (req, res) => {
-  const { search, status, page = 1, limit = 10 } = req.query;
+  const { search, status, page = 1, limit = 10, startDate, endDate } = req.query;
   let query = 'SELECT * FROM applications WHERE 1=1';
   const params = [];
+  
   if (search) {
-    query += ' AND (applicant_name LIKE ? OR startup_name LIKE ? OR email LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    query += ' AND (applicant_name LIKE ? OR startup_name LIKE ? OR email LIKE ? OR professional_status LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (status && status !== 'All') {
     query += ' AND status = ?';
     params.push(status);
   }
+  if (startDate) {
+    query += ' AND date(submitted_at) >= date(?)';
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ' AND date(submitted_at) <= date(?)';
+    params.push(endDate);
+  }
+
+  // Count before limiting
+  let countQuery = query.replace('SELECT *', 'SELECT COUNT(*) as count');
+  const countParams = [...params];
+  const totalCount = db.prepare(countQuery).get(...countParams).count;
+
   query += ' ORDER BY submitted_at DESC LIMIT ? OFFSET ?';
   params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
 
   const apps = db.prepare(query).all(...params);
-
-  let countQuery = 'SELECT COUNT(*) as count FROM applications WHERE 1=1';
-  const countParams = [];
-  if (search) {
-    countQuery += ' AND (applicant_name LIKE ? OR startup_name LIKE ? OR email LIKE ?)';
-    countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
-  }
-  if (status && status !== 'All') { countQuery += ' AND status = ?'; countParams.push(status); }
-  const totalCount = db.prepare(countQuery).get(...countParams).count;
 
   res.json({ applications: apps, total: totalCount, page: parseInt(page), limit: parseInt(limit) });
 });

@@ -207,6 +207,14 @@ body {
   padding: 40px;
 }
 
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
 .page-header {
   margin: 32px 0;
 }
@@ -382,9 +390,9 @@ body {
 .modal {
   background: #ffffff;
   border-radius: 16px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
+  width: 95%;
+  max-width: 1000px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
 }
@@ -395,6 +403,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .modal-body {

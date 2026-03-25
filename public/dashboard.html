@@ -7,7 +7,9 @@
   <meta name="description" content="MCC-MRF Innovation Park Admin Dashboard"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <link rel="stylesheet" href="css/dashboard.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -27,7 +29,7 @@
   <div class="sb-divider"></div>
 
   <div class="sb-title">
-    <span>MCC Certificate</span>
+    <span>MCC Incubation</span>
     <small>Admin Dashboard</small>
   </div>
 
@@ -38,19 +40,7 @@
     </a>
     <a href="#" class="sb-nav-item" onclick="showPage('applications')" id="nav-applications">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      <span>Users</span>
-    </a>
-    <a href="#" class="sb-nav-item" onclick="showPage('approved')" id="nav-approved">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      <span>Certificates</span>
-    </a>
-    <a href="#" class="sb-nav-item" onclick="showPage('activity')" id="nav-activity">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span>Activity Logs</span>
-    </a>
-    <a href="#" class="sb-nav-item" onclick="showPage('sessions')" id="nav-sessions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>Sessions</span>
+      <span>Applications Management</span>
     </a>
   </nav>
 
@@ -76,7 +66,7 @@
   <div class="page active" id="page-dashboard">
     <div class="page-header">
       <h1 class="page-title">Dashboard Overview</h1>
-      <p class="page-subtitle">Welcome back! Here's what's happening with your certificate system.</p>
+      <p class="page-subtitle">Welcome back! Here's what's happening with your Incubation Park setup.</p>
     </div>
 
     <!-- Stats Cards -->
@@ -109,11 +99,11 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon icon-certs">
+        <div class="stat-icon icon-certs" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </div>
         <div class="stat-text">
-          <div class="stat-label">CERTIFICATES</div>
+          <div class="stat-label">APPROVED</div>
           <div class="stat-value" id="stat-certs">0</div>
         </div>
       </div>
@@ -144,9 +134,25 @@
 
   <!-- ── PAGE: USERS (Applications) ── -->
   <div class="page" id="page-applications">
-    <div class="page-header">
-      <h1 class="page-title">Users Management</h1>
-      <p class="page-subtitle">View and manage all system users and applicants.</p>
+    <div class="page-header" style="display: flex; flex-direction: column; gap: 15px;">
+      <div>
+        <h1 class="page-title">Applications Management</h1>
+        <p class="page-subtitle">View and manage all system applicants.</p>
+      </div>
+      
+      <div class="filter-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
+        <div style="flex: 1; min-width: 250px; max-width: 350px; position: relative;">
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8;" onclick="currentPage=1; loadAllUsers(0)" style="cursor:pointer;"></i>
+          <input type="text" id="searchInput" placeholder="Search name/email/type" class="form-control" style="width: 100%; padding: 10px 14px 10px 38px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;" onkeypress="if(event.key === 'Enter'){ currentPage=1; loadAllUsers(0); }">
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <input type="date" id="startDate" class="form-control" title="Start Date" style="padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #475569;">
+          <span style="color: #64748b; font-size: 14px; font-weight: 500;">to</span>
+          <input type="date" id="endDate" class="form-control" title="End Date" style="padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #475569;">
+          <button class="btn" style="background: #f1f5f9; color: #1e293b; font-weight: 600; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 14px;" onclick="currentPage=1; loadAllUsers(0)">Search</button>
+          <button class="btn" style="background: #10b981; color: white; font-weight: 600; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; margin-left: auto;" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+        </div>
+      </div>
     </div>
     <div class="table-card">
       <div class="table-wrap">
@@ -164,6 +170,15 @@
             <tr><td colspan="5" class="table-empty">No users found.</td></tr>
           </tbody>
         </table>
+      </div>
+      
+      <!-- Pagination Controls -->
+      <div id="paginationControls" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-top: 1px solid #e2e8f0;">
+        <div style="font-size: 14px; color: #64748b;" id="paginationInfo">Showing 0 entries</div>
+        <div style="display: flex; gap: 5px;">
+          <button id="prevPageBtn" onclick="changePage(-1)" style="padding: 5px 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px;">Previous</button>
+          <button id="nextPageBtn" onclick="changePage(1)" style="padding: 5px 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px;">Next</button>
+        </div>
       </div>
     </div>
   </div>

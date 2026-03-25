@@ -148,19 +148,20 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'applicant_name', msg: 'Name is required' },
         { id: 'email', msg: 'Valid email required', type: 'email' },
         { id: 'whatsapp', msg: 'WhatsApp is required' },
-        { id: 'address', msg: 'Address is required' }
+        { id: 'address', msg: 'Address is required' },
+        { id: 'professional_status', msg: 'Please select professional status' }
       ],
       2: [
         { id: 'startup_name', msg: 'Startup name is required' },
-        { id: 'startup_description', msg: 'Description is required' },
+        { id: 'startup_file', msg: 'Pitchdeck is required' },
         { id: 'plan_to_grow', msg: 'Growth plan is required' }
       ],
       3: [
-        { id: 'how_connected', msg: 'Required field' },
-        { id: 'dialog_approach', msg: 'Required field' },
-        { id: 'reason_to_incubate', msg: 'Required field' },
-        { id: 'contributor', msg: 'Required field' },
-        { id: 'success_establishing', msg: 'Required field' }
+        { id: 'financial_support', msg: 'Required field' },
+        { id: 'incubation_support', msg: 'Required field' },
+        { id: 'incubation_duration', msg: 'Required field' },
+        { id: 'association_type', msg: 'Required field' },
+        { id: 'incubation_help', msg: 'Required field' }
       ],
       4: [
         { id: 'decl1', msg: 'Must accept all declarations', type: 'checkbox' },
