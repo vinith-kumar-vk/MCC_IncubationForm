@@ -9,9 +9,12 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure uploads directory
+// Ensure directories exist
 const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const imagesDir = path.join(__dirname, 'public', 'images');
+[uploadDir, imagesDir].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 // Multer setup
 const storage = multer.diskStorage({
@@ -52,7 +55,66 @@ db.exec(`
     declaration_agreed INTEGER DEFAULT 0,
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS site_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS form_fields (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    step INTEGER NOT NULL DEFAULT 1,
+    field_type TEXT NOT NULL,
+    field_name TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL,
+    placeholder TEXT,
+    required INTEGER DEFAULT 1,
+    options TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+// Seed default site settings
+const defaultSettings = [
+  { key: 'site_title', value: 'MCC-MRF' },
+  { key: 'site_subtitle', value: 'INNOVATION PARK' },
+  { key: 'site_location', value: 'Madras Christian College' },
+  { key: 'form_title', value: 'Application Form for Incubation @ MCCMRFIP' },
+  { key: 'form_subtitle', value: 'Begin your entrepreneurship journey with us. Fill in your personal details below.' },
+  { key: 'logo_path', value: '/images/logo.png' },
+  { key: 'footer_text', value: '© 2026 Madras Christian College' }
+];
+const insertSetting = db.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)');
+defaultSettings.forEach(s => insertSetting.run(s.key, s.value));
+
+// Seed default form fields if table is empty
+let fieldCount = 0;
+try {
+  fieldCount = db.prepare('SELECT COUNT(*) as c FROM form_fields').get().c;
+} catch (e) {
+  console.log('Form fields table not ready yet, skipping seeding...');
+}
+if (fieldCount === 0) {
+  const insertField = db.prepare(`INSERT INTO form_fields (step, field_type, field_name, label, placeholder, required, options, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  const defaultFields = [
+    [1, 'text', 'applicant_name', 'Full Name of Applicant', 'John Doe', 1, null, 1],
+    [1, 'email', 'email', 'Email Address', 'john@example.com', 1, null, 2],
+    [1, 'tel', 'whatsapp', 'WhatsApp Number', '+91-0000000000', 1, null, 3],
+    [1, 'textarea', 'address', 'Correspondence Address', 'Full postal address', 1, null, 4],
+    [1, 'select', 'professional_status', 'Current Professional Status', 'Select your current status', 1, 'Student,Working professional,Entrepreneur,Faculty or Alumni of MCC', 5],
+    [2, 'text', 'startup_name', 'Name of Startup / Idea', 'Name of your venture', 1, null, 1],
+    [2, 'text', 'plan_to_grow', 'Future Growth Strategy', 'Your scale-up plan', 1, null, 2],
+    [3, 'text', 'financial_support', 'Has your startup received any financial support?', '', 1, null, 1],
+    [3, 'text', 'incubation_support', 'Has your startup received any incubation support earlier?', '', 1, null, 2],
+    [3, 'text', 'incubation_duration', 'Expected Incubation Duration', '', 1, null, 3],
+    [3, 'text', 'association_type', 'How would you like to associate with MCC MRF Innovation Park?', '', 1, null, 4],
+    [3, 'textarea', 'incubation_help', 'Brief on how incubation would help you', '', 1, null, 5],
+  ];
+  defaultFields.forEach(f => insertField.run(...f));
+}
 
 // Seed default admin
 const adminExists = db.prepare('SELECT id FROM admins WHERE username = ?').get('mccmrfadmin');
@@ -211,6 +273,84 @@ app.delete('/api/applications/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ─── CMS: SITE SETTINGS ──────────────────────────────────────────────────────
+
+// Get all settings (public — used by form page)
+app.get('/api/settings', (req, res) => {
+  const rows = db.prepare('SELECT key, value FROM site_settings').all();
+  const settings = {};
+  rows.forEach(r => settings[r.key] = r.value);
+  res.json(settings);
+});
+
+// Update settings (admin only)
+app.put('/api/settings', requireAuth, (req, res) => {
+  const update = db.prepare('INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)');
+  const updates = req.body; // { key: value, ... }
+  for (const [k, v] of Object.entries(updates)) {
+    update.run(k, v);
+  }
+  res.json({ success: true });
+});
+
+// Logo upload (admin only)
+const logoStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, 'public', 'images')),
+  filename: (req, file, cb) => cb(null, 'logo' + path.extname(file.originalname))
+});
+const logoUpload = multer({ storage: logoStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+app.post('/api/settings/logo', requireAuth, logoUpload.single('logo'), (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+  const logoPath = '/images/' + req.file.filename;
+  db.prepare('INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)').run('logo_path', logoPath);
+  res.json({ success: true, logo_path: logoPath });
+});
+
+// ─── CMS: FORM FIELDS ────────────────────────────────────────────────────────
+
+// Get all form fields (public — used by form page)
+app.get('/api/form-fields', (req, res) => {
+  const fields = db.prepare('SELECT * FROM form_fields WHERE is_active = 1 ORDER BY step ASC, sort_order ASC').all();
+  res.json(fields);
+});
+
+// Get all form fields including inactive (admin only)
+app.get('/api/admin/form-fields', requireAuth, (req, res) => {
+  const fields = db.prepare('SELECT * FROM form_fields ORDER BY step ASC, sort_order ASC').all();
+  res.json(fields);
+});
+
+// Create new field
+app.post('/api/admin/form-fields', requireAuth, (req, res) => {
+  const { step, field_type, field_name, label, placeholder, required, options, sort_order } = req.body;
+  try {
+    const result = db.prepare(`
+      INSERT INTO form_fields (step, field_type, field_name, label, placeholder, required, options, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(step, field_type, field_name, label, placeholder || '', required ? 1 : 0, options || null, sort_order || 99);
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (e) {
+    res.status(400).json({ success: false, message: e.message });
+  }
+});
+
+// Update field
+app.put('/api/admin/form-fields/:id', requireAuth, (req, res) => {
+  const { step, field_type, label, placeholder, required, options, sort_order, is_active } = req.body;
+  db.prepare(`
+    UPDATE form_fields SET step=?, field_type=?, label=?, placeholder=?, required=?, options=?, sort_order=?, is_active=?
+    WHERE id=?
+  `).run(step, field_type, label, placeholder || '', required ? 1 : 0, options || null, sort_order || 0, is_active ? 1 : 0, req.params.id);
+  res.json({ success: true });
+});
+
+// Delete field
+app.delete('/api/admin/form-fields/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM form_fields WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
 app.listen(PORT, () => {
   console.log(`\n🚀 MCC-MRF Incubation System running at http://localhost:${PORT}`);
   console.log(`📋 Form: http://localhost:${PORT}/index.html`);
@@ -218,3 +358,4 @@ app.listen(PORT, () => {
   console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard.html`);
   console.log(`\n🔑 Admin credentials: mccmrfadmin / admin1234\n`);
 });
+

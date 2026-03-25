@@ -25,10 +25,10 @@
         <div class="sidebar-content">
           <div class="brand-section mb-5">
             <div class="d-flex align-items-center gap-3">
-              <img src="/images/logo.png" alt="Logo" class="brand-logo shadow-sm" />
+              <img src="/images/logo.png" alt="Logo" class="brand-logo shadow-sm" id="siteLogo" />
               <div>
-                <h2 class="sidebar-brand-name mb-0">MCC-MRF</h2>
-                <p class="sidebar-tagline mb-0">INNOVATION PARK</p>
+                <h2 class="sidebar-brand-name mb-0" id="siteTitle">MCC-MRF</h2>
+                <p class="sidebar-tagline mb-0" id="siteSubtitle">INNOVATION PARK</p>
               </div>
             </div>
           </div>
@@ -65,7 +65,7 @@
           </nav>
 
           <div class="sidebar-footer mt-auto pt-4">
-            <p class="small opacity-50 mb-0">© 2026 Madras Christian College</p>
+            <p class="small opacity-50 mb-0" id="footerText">© 2026 Madras Christian College</p>
           </div>
         </div>
       </aside>
@@ -88,57 +88,13 @@
               <!-- Step 1: Bio -->
               <section class="form-step active" id="step1">
                 <div class="step-header banner-premium">
-                  <h2 class="step-title">Application Form for Incubation @ MCCMRFIP</h2>
-                  <p class="step-subtitle">Begin your entrepreneurship journey with us. Fill in your personal details
+                  <h2 class="step-title" id="formTitle">Application Form for Incubation @ MCCMRFIP</h2>
+                  <p class="step-subtitle" id="formSubtitle">Begin your entrepreneurship journey with us. Fill in your personal details
                     below.</p>
                 </div>
 
-                <div class="row g-4">
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="applicant_name">Full Name of Applicant <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="applicant_name" id="applicant_name"
-                        placeholder="John Doe" required />
-                      <div class="error-msg" id="err_applicant_name"></div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="premium-field">
-                      <label for="email">Email Address <span class="required-star">*</span></label>
-                      <input type="email" class="form-control premium-input" name="email" id="email"
-                        placeholder="john@example.com" required />
-                      <div class="error-msg" id="err_email"></div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="premium-field">
-                      <label for="whatsapp">WhatsApp Number <span class="required-star">*</span></label>
-                      <input type="tel" class="form-control premium-input" name="whatsapp" id="whatsapp"
-                        placeholder="+91-0000000000" required />
-                      <div class="error-msg" id="err_whatsapp"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="address">Correspondence Address <span class="required-star">*</span></label>
-                      <textarea class="form-control premium-input" name="address" id="address"
-                        placeholder="Full postal address" required rows="2"></textarea>
-                      <div class="error-msg" id="err_address"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="professional_status">Current Professional Status <span class="required-star">*</span></label>
-                      <select class="form-control premium-input form-select" name="professional_status" id="professional_status" required>
-                        <option value="" disabled selected>Select your current status</option>
-                        <option value="Student">Student</option>
-                        <option value="Working professional">Working professional</option>
-                        <option value="Entrepreneur">Entrepreneur</option>
-                        <option value="Faculty or Alumni of MCC">Faculty or Alumni of MCC</option>
-                      </select>
-                      <div class="error-msg" id="err_professional_status"></div>
-                    </div>
-                  </div>
+                <div class="row g-4" id="dynamicFieldsStep1">
+                  <!-- Dynamic Fields for Step 1 -->
                 </div>
               </section>
 
@@ -149,40 +105,8 @@
                   <p class="step-subtitle">Share the problem you're solving and your solution.</p>
                 </div>
 
-                <div class="row g-4">
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="startup_name">Name of Startup / Idea <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="startup_name" id="startup_name"
-                        placeholder="Name of your venture" required />
-                      <div class="error-msg" id="err_startup_name"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label>Upload your pitch deck describing the: Problem Idea & Vision / Competitive edge / revenue & Social impact <span class="required-star">*</span></label>
-                      <p class="field-instruction-text small mb-2 text-muted">Suggestive: What is the problem you are trying to solve? / How do you / your startup plan to solve the problem? / How is your solution better than that of the competitors? / Market potential of your product / How much revenue expected in the next year? etc. Upload your pitch deck here. Max 10 slides. Supported formats: PDF.</p>
-                      
-                      <div class="file-premium-zone mt-2" id="fileUploadZone">
-                        <div class="p-4 border rounded-3 text-center transition-all bg-light">
-                          <div class="icon-circle mb-3 mx-auto">📎</div>
-                          <p class="mb-1 fw-medium">Upload Pitchdeck (PDF)</p>
-                          <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Choose File</button>
-                        </div>
-                        <input type="file" id="startup_file" name="startup_file" class="d-none" accept=".pdf" />
-                        <div id="fileName" class="text-center mt-2 small fw-bold text-maroon">No file chosen</div>
-                        <div class="error-msg text-center mt-1" id="err_startup_file"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="plan_to_grow">Future Growth Strategy <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="plan_to_grow" id="plan_to_grow"
-                        placeholder="Your scale-up plan" required />
-                      <div class="error-msg" id="err_plan_to_grow"></div>
-                    </div>
-                  </div>
+                <div class="row g-4" id="dynamicFieldsStep2">
+                  <!-- Dynamic Fields for Step 2 -->
                 </div>
               </section>
 
@@ -193,86 +117,8 @@
                   <p class="step-subtitle">Select the resources and support you need to succeed.</p>
                 </div>
 
-                <div class="premium-field mb-4">
-                  <label class="mb-3">Please select the incubation services that you need from MCC MRF Innovation Park: <span class="required-star">*</span></label>
-                  <div class="checkbox-multi-select g-3 row">
-                    <div class="col-md-6 col-lg-4">
-                      <div class="premium-check-card">
-                        <input type="checkbox" name="services_needed" value="Office Space" id="svc1" />
-                        <label for="svc1"><span>Office Space</span></label>
-                      </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                      <div class="premium-check-card">
-                        <input type="checkbox" name="services_needed" value="Maker Space" id="svc2" />
-                        <label for="svc2"><span>Maker Space</span></label>
-                      </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                      <div class="premium-check-card">
-                        <input type="checkbox" name="services_needed" value="Mentor Access" id="svc3" />
-                        <label for="svc3"><span>Mentor Access</span></label>
-                      </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                      <div class="premium-check-card">
-                        <input type="checkbox" name="services_needed" value="Lab equipment / Technical Support" id="svc4" />
-                        <label for="svc4"><span>Lab equipment / Tech Support</span></label>
-                      </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                      <div class="premium-check-card">
-                        <input type="checkbox" name="services_needed" value="Business / Finance / Network / Marketing plan" id="svc5" />
-                        <label for="svc5"><span>Business / Network / Marketing</span></label>
-                      </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                      <div class="premium-check-card">
-                        <input type="checkbox" name="services_needed" value="Seed money Assistance" id="svc6" />
-                        <label for="svc6"><span>Seed money Assistance</span></label>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="error-msg mt-2" id="err_services"></div>
-                </div>
-
-                <div class="row g-4 mt-2">
-                <div class="row g-4 mt-2">
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="financial_support">Has your startup received any financial support? If yes, please provide the details. <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="financial_support" id="financial_support" required />
-                      <div class="error-msg" id="err_financial_support"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="incubation_support">Has your startup received any incubation support earlier? If yes, please provide the details <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="incubation_support" id="incubation_support" required />
-                      <div class="error-msg" id="err_incubation_support"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="incubation_duration">For what duration do you expect your Startup to require Incubation Support? <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="incubation_duration" id="incubation_duration" required />
-                      <div class="error-msg" id="err_incubation_duration"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="association_type">How would you like to associate with MCC MRF Innovation Park? <span class="required-star">*</span></label>
-                      <input type="text" class="form-control premium-input" name="association_type" id="association_type" required />
-                      <div class="error-msg" id="err_association_type"></div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="premium-field">
-                      <label for="incubation_help">A small brief on how incubation would help you in building your product/company (can include a 2 minute video link of your pitch & company overview) <span class="required-star">*</span></label>
-                      <textarea class="form-control premium-input" name="incubation_help" id="incubation_help" rows="3" required></textarea>
-                      <div class="error-msg" id="err_incubation_help"></div>
-                    </div>
-                  </div>
+                <div class="row g-4 mt-2" id="dynamicFieldsStep3">
+                  <!-- Dynamic Fields for Step 3 -->
                 </div>
               </section>
 

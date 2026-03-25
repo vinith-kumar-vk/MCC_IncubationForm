@@ -1,36 +1,130 @@
-// form.js - MCC-MRF Ultra-Premium Multi-Step Logic
+// form.js - MCC-MRF Dynamic Multi-Step Logic
+let currentStep = 1;
+const totalSteps = 4;
+let dynamicFieldsConfig = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-  let currentStep = 1;
-  const totalSteps = 4;
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadCMSSettings();
+  await loadDynamicFields();
+  initFormLogic();
+});
 
-  const form = document.getElementById('incubationForm');
+async function loadCMSSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    const s = await res.json();
+    const stitle = id('siteTitle'); if (stitle && s.site_title) stitle.textContent = s.site_title;
+    const ssub = id('siteSubtitle'); if (ssub && s.site_subtitle) ssub.textContent = s.site_subtitle;
+    const ftitle = id('formTitle'); if (ftitle && s.form_title) ftitle.textContent = s.form_title;
+    const fsub = id('formSubtitle'); if (fsub && s.form_subtitle) fsub.textContent = s.form_subtitle;
+    const footer = id('footerText'); if (footer && s.footer_text) footer.textContent = s.footer_text;
+    const logo = id('siteLogo'); if (logo && s.logo_path) logo.src = s.logo_path;
+  } catch (e) { console.error('CMS Settings load error', e); }
+}
+
+async function loadDynamicFields() {
+  try {
+    const res = await fetch('/api/form-fields');
+    dynamicFieldsConfig = await res.json();
+    
+    const stepsGroup = { 1: [], 2: [], 3: [] };
+    dynamicFieldsConfig.forEach(f => stepsGroup[f.step].push(f));
+
+    for (let s = 1; s <= 3; s++) {
+      const container = id(`dynamicFieldsStep${s}`);
+      if (!container) continue;
+      
+      let html = stepsGroup[s].map(f => renderField(f)).join('');
+
+      // Step 2 pitch deck - special fixed field
+      if (s === 2) {
+        html += `
+          <div class="col-12 mt-3">
+            <div class="premium-field">
+              <label>Upload your pitch deck (PDF) <span class="required-star">*</span></label>
+              <div class="file-premium-zone mt-2" id="fileUploadZone">
+                <div class="p-4 border rounded-3 text-center transition-all bg-light">
+                  <div class="icon-circle mb-3 mx-auto">📎</div>
+                  <p class="mb-1 fw-medium">Upload Pitchdeck (PDF)</p>
+                  <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Choose File</button>
+                </div>
+                <input type="file" id="startup_file" name="startup_file" class="d-none" accept=".pdf" />
+                <div id="fileName" class="text-center mt-2 small fw-bold text-maroon">No file chosen</div>
+                <div class="error-msg text-center mt-1" id="err_startup_file"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Step 3 services - special fixed field
+      if (s === 3) {
+        html = `
+          <div class="premium-field mb-4 w-100">
+            <label class="mb-3">Please select the incubation services that you need: <span class="required-star">*</span></label>
+            <div class="checkbox-multi-select g-3 row">
+              ${['Office Space','Maker Space','Mentor Access','Lab equipment / Tech Support','Business / Network / Marketing','Seed money Assistance'].map((svc, i) => `
+                <div class="col-md-6 col-lg-4">
+                  <div class="premium-check-card">
+                    <input type="checkbox" name="services_needed" value="${svc}" id="svc${i}" />
+                    <label for="svc${i}"><span>${svc}</span></label>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="error-msg mt-2" id="err_services"></div>
+          </div>
+        ` + html;
+      }
+
+      container.innerHTML = html;
+    }
+  } catch (e) { console.error('Dynamic fields load error', e); }
+}
+
+function renderField(f) {
+  const reqAttr = f.required ? 'required' : '';
+  const star = f.required ? '<span class="required-star">*</span>' : '';
+  let inputHtml = '';
+
+  if (['text', 'email', 'tel', 'number', 'date', 'url'].includes(f.field_type)) {
+    inputHtml = `<input type="${f.field_type}" class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" placeholder="${f.placeholder || ''}" ${reqAttr} />`;
+  } else if (f.field_type === 'textarea') {
+    inputHtml = `<textarea class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" rows="2" placeholder="${f.placeholder || ''}" ${reqAttr}></textarea>`;
+  } else if (f.field_type === 'select') {
+    const opts = (f.options || '').split(',').map(o => `<option value="${o.trim()}">${o.trim()}</option>`).join('');
+    inputHtml = `<select class="form-control premium-input form-select" name="${f.field_name}" id="${f.field_name}" ${reqAttr}>
+      <option value="" disabled selected>${f.placeholder || 'Select...'}</option>
+      ${opts}
+    </select>`;
+  }
+
+  const colClass = (f.field_type === 'textarea' || f.step === 2) ? 'col-12' : 'col-md-6';
+  return `<div class="${colClass}"><div class="premium-field"><label for="${f.field_name}">${f.label} ${star}</label>${inputHtml}<div class="error-msg" id="err_${f.field_name}"></div></div></div>`;
+}
+
+function id(name) { return document.getElementById(name); }
+
+function initFormLogic() {
+  const form = id('incubationForm');
   const steps = document.querySelectorAll('.form-step');
-  const nextBtn = document.getElementById('nextBtn');
-  const prevBtn = document.getElementById('prevBtn');
-  const submitBtn = document.getElementById('submitBtn');
+  const navItems = document.querySelectorAll('.nav-item');
+  const nextBtn = id('nextBtn');
+  const prevBtn = id('prevBtn');
+  const submitBtn = id('submitBtn');
   const progressBar = id('progressBar');
   const currentStepText = id('currentStepText');
-  const navItems = document.querySelectorAll('.nav-item');
 
-  // Utility to get element by ID
-  function id(name) { return document.getElementById(name); }
-
-  // Step Navigation Logic
   function updateStep() {
     steps.forEach((step, idx) => {
       step.classList.toggle('active', idx + 1 === currentStep);
       step.classList.toggle('d-none', idx + 1 !== currentStep);
     });
-
     navItems.forEach((item, idx) => {
       item.classList.toggle('active', idx + 1 === currentStep);
       item.classList.toggle('completed', idx + 1 < currentStep);
     });
-
-    // Buttons visibility
     prevBtn.classList.toggle('d-none', currentStep === 1);
-    
     if (currentStep === totalSteps) {
       nextBtn.classList.add('d-none');
       submitBtn.classList.remove('d-none');
@@ -38,189 +132,67 @@ document.addEventListener('DOMContentLoaded', () => {
       nextBtn.classList.remove('d-none');
       submitBtn.classList.add('d-none');
     }
-
-    // Progress
-    const progressPercent = (currentStep / totalSteps) * 100;
-    progressBar.style.width = `${progressPercent}%`;
+    progressBar.style.width = `${(currentStep / totalSteps) * 100}%`;
     currentStepText.textContent = currentStep;
-
-    // Update Header Breadcrumb Label
-    const stepLabels = [
-      "Bio & Contact",
-      "Startup Vision",
-      "Incubation Support",
-      "Final Confirmation"
-    ];
-    id('currentStepLabel').textContent = stepLabels[currentStep - 1];
-
-    // Scroll top
     document.querySelector('.form-container-scroll').scrollTop = 0;
   }
 
-  nextBtn.addEventListener('click', () => {
-    if (validateStep(currentStep)) {
-      if (currentStep < totalSteps) {
-        currentStep++;
-        updateStep();
-      }
-    }
-  });
+  nextBtn.addEventListener('click', () => { if (validateStep(currentStep)) { currentStep++; updateStep(); } });
+  prevBtn.addEventListener('click', () => { if (currentStep > 1) { currentStep--; updateStep(); } });
 
-  prevBtn.addEventListener('click', () => {
-    if (currentStep > 1) {
-      currentStep--;
-      updateStep();
-    }
-  });
-
-  // Sidebar clicking (only for completed or current steps)
-  navItems.forEach((item, idx) => {
-    item.addEventListener('click', () => {
-      const targetStep = idx + 1;
-      if (targetStep < currentStep || validateStep(currentStep)) {
-        currentStep = targetStep;
-        updateStep();
-      }
-    });
-  });
-
-  // File upload display
   const fileInput = id('startup_file');
   const fileName = id('fileName');
   const fileZone = id('fileUploadZone');
-
   if (fileInput && fileZone) {
     fileZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', () => {
-      fileName.textContent = fileInput.files[0] ? fileInput.files[0].name : 'No file chosen';
-    });
+    fileInput.addEventListener('change', () => { fileName.textContent = fileInput.files[0]?.name || 'No file chosen'; });
   }
 
-  // Clear form
-  id('clearBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    if (confirm('Clear all fields and restart?')) {
-      form.reset();
-      fileName.textContent = 'No file chosen';
-      currentStep = 1;
-      clearAllErrors();
-      updateStep();
-    }
-  });
-
-  // Form final submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!validateStep(4)) return;
-
-    submitBtn.classList.add('loading');
-    submitBtn.textContent = 'Processing...';
-
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
     try {
-      const formData = new FormData(form);
-      const response = await fetch('/api/apply', {
-        method: 'POST',
-        body: formData
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        id('successModal').classList.add('active');
-        form.reset();
-      } else {
-        alert(result.message || 'Submission failed.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network error.');
-    } finally {
-      submitBtn.classList.remove('loading');
-      submitBtn.textContent = 'Finish & Submit';
-    }
+      const res = await fetch('/api/apply', { method: 'POST', body: new FormData(form) });
+      const data = await res.json();
+      if (data.success) { id('successModal').classList.add('active'); form.reset(); }
+      else alert(data.message);
+    } catch (err) { alert('Network error'); }
+    finally { submitBtn.disabled = false; submitBtn.textContent = 'Finish & Submit'; }
   });
 
-  function validateStep(stepNum) {
+  function validateStep(sNum) {
     clearAllErrors();
     let isValid = true;
-    
-    const stepFields = {
-      1: [
-        { id: 'applicant_name', msg: 'Name is required' },
-        { id: 'email', msg: 'Valid email required', type: 'email' },
-        { id: 'whatsapp', msg: 'WhatsApp is required' },
-        { id: 'address', msg: 'Address is required' },
-        { id: 'professional_status', msg: 'Please select professional status' }
-      ],
-      2: [
-        { id: 'startup_name', msg: 'Startup name is required' },
-        { id: 'startup_file', msg: 'Pitchdeck is required' },
-        { id: 'plan_to_grow', msg: 'Growth plan is required' }
-      ],
-      3: [
-        { id: 'financial_support', msg: 'Required field' },
-        { id: 'incubation_support', msg: 'Required field' },
-        { id: 'incubation_duration', msg: 'Required field' },
-        { id: 'association_type', msg: 'Required field' },
-        { id: 'incubation_help', msg: 'Required field' }
-      ],
-      4: [
-        { id: 'decl1', msg: 'Must accept all declarations', type: 'checkbox' },
-        { id: 'decl2', msg: '', type: 'checkbox' },
-        { id: 'decl3', msg: '', type: 'checkbox' },
-        { id: 'decl4', msg: '', type: 'checkbox' }
-      ]
-    };
-
-    const currentFields = stepFields[stepNum] || [];
-    currentFields.forEach(f => {
-      const el = id(f.id);
-      if (!el) return;
-      
-      if (f.type === 'checkbox') {
-        if (!el.checked) {
-          isValid = false;
-          showError('err_declaration', f.msg || 'Please accept all terms.');
-        }
-      } else {
-        const val = el.value.trim();
-        if (!val) {
-          isValid = false;
-          showError(`err_${f.id}`, f.msg);
-          el.classList.add('error');
-        } else if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-          isValid = false;
-          showError(`err_${f.id}`, 'Invalid email address');
-          el.classList.add('error');
-        }
-      }
-    });
-
-    if (stepNum === 3) {
-      const checked = document.querySelectorAll('input[name="services_needed"]:checked');
-      if (checked.length === 0) {
+    if (sNum <= 3) {
+      const stepFields = dynamicFieldsConfig.filter(f => f.step === sNum && f.required);
+      stepFields.forEach(f => {
+        const el = id(f.field_name);
+        if (!el || el.value.trim()) return;
         isValid = false;
-        showError('err_services', 'Select at least one service');
+        showError(`err_${f.field_name}`, 'Required field');
+        el.classList.add('error');
+      });
+      if (sNum === 2 && !id('startup_file').files[0]) {
+        isValid = false; showError('err_startup_file', 'Pitchdeck required');
       }
+      if (sNum === 3 && !document.querySelector('input[name="services_needed"]:checked')) {
+        isValid = false; showError('err_services', 'Select at least one');
+      }
+    } else {
+      if (!id('decl1').checked) { isValid = false; showError('err_declaration', 'Accept all terms'); }
     }
-
     return isValid;
   }
 
-  function showError(targetId, msg) {
-    const el = id(targetId);
-    if (el) el.textContent = msg;
-  }
-
+  function showError(tid, msg) { const el = id(tid); if (el) el.textContent = msg; }
   function clearAllErrors() {
     document.querySelectorAll('.error-msg').forEach(e => e.textContent = '');
     document.querySelectorAll('.premium-input').forEach(e => e.classList.remove('error'));
   }
-
-  // Initial call
   updateStep();
-});
-
-function closeModal() {
-  document.getElementById('successModal').classList.remove('active');
-  window.location.reload();
 }
+
+function closeModal() { id('successModal').classList.remove('active'); window.location.reload(); }
+
