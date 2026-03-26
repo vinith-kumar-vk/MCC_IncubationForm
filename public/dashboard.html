@@ -9,11 +9,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <link rel="stylesheet" href="css/dashboard.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+  <!-- Mobile Header -->
+  <header class="mobile-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <i class="fa-solid fa-building-columns" style="color: #fff; font-size: 20px;"></i>
+      <span style="font-weight: 700; letter-spacing: 0.5px; font-size: 14px;">MCC ADMIN</span>
+    </div>
+    <button id="toggleSidebar" style="background:transparent; border:none; color:white; font-size:24px; cursor:pointer;">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </header>
 
-<!-- ──── SIDEBAR ──── -->
+  <!-- Sidebar Backdrop overlay for mobile -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Custom Toast Notification -->
+  <div id="toast"><i class="fa-solid fa-circle-check"></i> <span id="toastMsg">Saved successfully</span></div>
+
+  <!-- ──── SIDEBAR ──── -->
 <aside class="sidebar" id="sidebar">
   <div class="sb-header">
     <div class="sb-logo">
@@ -142,23 +157,23 @@
 
   <!-- ── PAGE: USERS (Applications) ── -->
   <div class="page" id="page-applications">
-    <div class="page-header" style="display: flex; flex-direction: column; gap: 15px;">
+    <div class="page-header application-header">
       <div>
         <h1 class="page-title">Applications Management</h1>
         <p class="page-subtitle">View and manage all system applicants.</p>
       </div>
       
-      <div class="filter-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
-        <div style="flex: 1; min-width: 250px; max-width: 350px; position: relative;">
-          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8;" onclick="currentPage=1; loadAllUsers(0)" style="cursor:pointer;"></i>
-          <input type="text" id="searchInput" placeholder="Search name/email/type" class="form-control" style="width: 100%; padding: 10px 14px 10px 38px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;" onkeypress="if(event.key === 'Enter'){ currentPage=1; loadAllUsers(0); }">
+      <div class="filter-bar">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass" onclick="currentPage=1; loadAllUsers(0)" style="cursor:pointer;"></i>
+          <input type="text" id="searchInput" placeholder="Search name/email/type" class="form-control" onkeypress="if(event.key === 'Enter'){ currentPage=1; loadAllUsers(0); }">
         </div>
-        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-          <input type="date" id="startDate" class="form-control" title="Start Date" style="padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #475569;">
-          <span style="color: #64748b; font-size: 14px; font-weight: 500;">to</span>
-          <input type="date" id="endDate" class="form-control" title="End Date" style="padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #475569;">
-          <button class="btn" style="background: #f1f5f9; color: #1e293b; font-weight: 600; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 14px;" onclick="currentPage=1; loadAllUsers(0)">Search</button>
-          <button class="btn" style="background: #10b981; color: white; font-weight: 600; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; margin-left: auto;" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+        <div class="filter-actions">
+          <input type="date" id="startDate" class="form-control" title="Start Date">
+          <span class="date-sep">to</span>
+          <input type="date" id="endDate" class="form-control" title="End Date">
+          <button class="btn btn-search" onclick="currentPage=1; loadAllUsers(0)">Search</button>
+          <button class="btn btn-export" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
         </div>
       </div>
     </div>
@@ -198,7 +213,7 @@
       <p class="page-subtitle">Edit your logo, brand name, and site content. Changes reflect on the live website immediately.</p>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div class="cms-layout-grid">
       <!-- Logo Upload -->
       <div class="cms-card">
         <div class="cms-card-title"><i class="fa-solid fa-image" style="color:#8B1A2E;"></i> Logo</div>
@@ -256,13 +271,15 @@
 
   <!-- ── PAGE: FORM BUILDER ── -->
   <div class="page" id="page-form-builder">
-    <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <h1 class="page-title">Form Builder</h1>
-        <p class="page-subtitle">Add, edit, or remove fields from the application form. Changes are live immediately.</p>
+    <div class="cms-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div class="cms-card-title" style="margin-bottom:0;"><i class="fa-solid fa-list-check" style="color:#8B1A2E;"></i> Manage Form Fields</div>
+        <div style="font-size:12px; color:#64748b;"><i class="fa-solid fa-circle-info"></i> Drag rows.</div>
+        <div style="display:flex; gap:10px;">
+          <button id="saveOrderBtn" class="cms-save-btn" onclick="saveFieldsOrder()" style="width:auto; margin:0; background:#10b981; display:none;"><i class="fa-solid fa-check"></i> Save Order</button>
+          <button class="cms-save-btn" onclick="openFieldModal(null)" style="width:auto; margin:0;"><i class="fa-solid fa-plus"></i> Add New Field</button>
+        </div>
       </div>
-      <button class="cms-save-btn" style="margin:0;" onclick="openFieldModal(null)"><i class="fa-solid fa-plus"></i> Add New Field</button>
-    </div>
 
     <!-- Step Tabs -->
     <div style="display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;">
@@ -277,18 +294,19 @@
         <table class="data-table" id="fieldsTable">
           <thead>
             <tr>
-              <th>ORDER</th>
-              <th>STEP</th>
-              <th>FIELD NAME</th>
-              <th>LABEL</th>
-              <th>TYPE</th>
-              <th>REQUIRED</th>
-              <th>STATUS</th>
-              <th>ACTIONS</th>
+              <th style="width:40px; text-align:center;"></th>
+              <th style="width:60px; text-align:center;">ORDER</th>
+              <th style="width:100px; text-align:center;">STEP</th>
+              <th style="width:150px;">NAME</th>
+              <th style="min-width:200px;">LABEL</th>
+              <th style="width:100px; text-align:center;">TYPE</th>
+              <th style="width:60px; text-align:center;">REQ.</th>
+              <th style="width:120px; text-align:center;">STATUS</th>
+              <th style="width:100px; text-align:right;">ACTIONS</th>
             </tr>
           </thead>
           <tbody id="fieldsTbody">
-            <tr><td colspan="8" class="table-empty">Loading fields...</td></tr>
+            <tr><td colspan="10" class="table-empty">No fields found.</td></tr>
           </tbody>
         </table>
       </div>
@@ -342,6 +360,14 @@
           <option value="url">URL</option>
         </select>
       </div>
+      <div class="cms-field">
+        <label>Display Layout (Column Width)</label>
+        <select id="fld_width" class="cms-input">
+          <option value="12">Full Width (1 Row)</option>
+          <option value="6">Half Width (2 per Row)</option>
+        </select>
+      </div>
+
       <div class="cms-field" id="row_field_name">
         <label>Field Name (unique key, no spaces)</label>
         <input type="text" id="fld_name" class="cms-input" placeholder="e.g. applicant_name">
@@ -358,10 +384,8 @@
         <label>Options (comma separated)</label>
         <input type="text" id="fld_options" class="cms-input" placeholder="Option 1, Option 2, Option 3">
       </div>
-      <div class="cms-field">
-        <label>Sort Order</label>
-        <input type="number" id="fld_order" class="cms-input" value="99">
-      </div>
+      <!-- Sort Order hidden as we use drag and drop now -->
+      <input type="hidden" id="fld_order" value="1">
       <div class="cms-field" style="display:flex; align-items:center; gap:10px;">
         <input type="checkbox" id="fld_required" style="width:16px; height:16px;">
         <label for="fld_required" style="margin:0; font-weight:500;">Required field?</label>
@@ -379,6 +403,8 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
 </html>

@@ -1,10 +1,108 @@
 // dashboard.js - MCC-MRF Dashboard Logic
+let currentPage = 1;
+const limit = 10;
+
+// Helper for shortening getElementById
+const id = (uid) => document.getElementById(uid);
+
+async function showToast(msg) {
+  const toast = id('toast');
+  const toastMsg = id('toastMsg');
+  if (toast && toastMsg) {
+    toastMsg.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   await checkAuth();
   await loadStats();
   await loadRecentUsers();
+
+  // Mobile sidebar toggle
+  const toggleBtn = id('toggleSidebar');
+  const sidebar = id('sidebar');
+  const overlay = id('sidebarOverlay');
+  if (toggleBtn && sidebar && overlay) {
+    const toggle = () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+    };
+    toggleBtn.addEventListener('click', toggle);
+    overlay.addEventListener('click', toggle);
+  }
 });
+
+let sortableInstance = null;
+
+function initSortable() {
+  const el = document.getElementById('fieldsTbody');
+  if (!el) { console.log('Tbody not found'); return; }
+  
+  // Clear existing
+  if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
+
+  // Drag works ONLY in step-specific views (as requested to avoid confusion)
+  if (activeStepFilter === 0) {
+    console.log('Drag disabled: Please select Step 1, 2, or 3');
+    return;
+  }
+
+  console.log('Initializing Sortable for Step:', activeStepFilter);
+  sortableInstance = Sortable.create(el, {
+    handle: '.drag-handle',
+    animation: 200,
+    ghostClass: 'sortable-ghost',
+    onEnd: () => {
+      const btn = document.getElementById('saveOrderBtn');
+      if (btn) { btn.style.display = 'inline-flex'; btn.classList.add('pulse-animation'); }
+      
+      const rows = Array.from(el.querySelectorAll('tr.field-row'));
+      rows.forEach((r, i) => {
+        const orderTd = r.querySelector('.order-label');
+        if(orderTd) orderTd.textContent = i + 1;
+      });
+    }
+  });
+}
+
+async function saveFieldsOrder() {
+  const tbody = id('fieldsTbody');
+  const btn = id('saveOrderBtn');
+  const rows = Array.from(tbody.querySelectorAll('tr.field-row'));
+  
+  const orders = rows.map((row, index) => ({
+    id: parseInt(row.getAttribute('data-id')),
+    step: parseInt(row.getAttribute('data-step')),
+    sort_order: index + 1
+  }));
+
+  try {
+    const res = await fetch('/api/admin/form-fields/reorder', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orders })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (btn) { btn.style.display = 'none'; btn.classList.remove('pulse-animation'); }
+      showToast('Order saved successfully');
+      
+      // Update local allFields to match the UI state
+      orders.forEach(ord => {
+        const found = allFields.find(x => x.id === ord.id);
+        if (found) {
+          found.sort_order = ord.sort_order;
+          found.step = ord.step;
+        }
+      });
+      // Important: Re-sort the array based on updated sort_order
+      allFields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
+      filterStep(activeStepFilter);
+    }
+  } catch (e) { showToast('Failed to save.'); }
+}
 
 async function checkAuth() {
   try {
@@ -71,6 +169,13 @@ async function loadRecentUsers() {
 
 // ─── Sidebar Navigation ─────────────────────────────────────────────────────
 function showPage(pageId) {
+  // Close sidebar on mobile after choosing a page
+  const sidebar = id('sidebar');
+  const overlay = id('sidebarOverlay');
+  if (sidebar && window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const target = document.getElementById('page-' + pageId);
   if (target) target.classList.add('active');
@@ -118,18 +223,17 @@ function previewLogo(event) {
 
 async function uploadLogo() {
   const fileInput = document.getElementById('logoFileInput');
-  if (!fileInput.files[0]) { alert('Please choose a logo file first.'); return; }
+  if (!fileInput.files[0]) { showToast('Please choose a logo file first.'); return; }
   const formData = new FormData();
   formData.append('logo', fileInput.files[0]);
   try {
     const res = await fetch('/api/settings/logo', { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) {
-      // Update sidebar logo too
       document.getElementById('sbLogo').src = data.logo_path + '?t=' + Date.now();
-      showSettingsMsg();
-    } else { alert('Logo upload failed: ' + data.message); }
-  } catch (e) { alert('Upload error.'); }
+      showToast('Logo saved successfully');
+    } else { showToast('Logo upload failed: ' + data.message); }
+  } catch (e) { showToast('Upload error.'); }
 }
 
 async function saveBrandSettings() {
@@ -162,9 +266,9 @@ async function saveSettings(payload) {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    if (data.success) showSettingsMsg();
-    else alert('Save failed.');
-  } catch (e) { alert('Error saving settings.'); }
+    if (data.success) showToast('Saved successfully');
+    else showToast('Save failed.');
+  } catch (e) { showToast('Error saving settings.'); }
 }
 
 function showSettingsMsg() {
@@ -182,6 +286,8 @@ async function loadFormFields() {
     const res = await fetch('/api/admin/form-fields');
     allFields = await res.json();
     renderFieldsTable(allFields);
+    // Increased timeout for better stability
+    setTimeout(initSortable, 300);
   } catch (e) { console.error('Fields load error', e); }
 }
 
@@ -196,24 +302,47 @@ function filterStep(step) {
 function renderFieldsTable(fields) {
   const tbody = document.getElementById('fieldsTbody');
   if (!fields.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No fields found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="table-empty">No fields found.</td></tr>';
     return;
   }
-  tbody.innerHTML = fields.map(f => `
-    <tr>
-      <td style="color:#94a3b8;">${f.sort_order}</td>
-      <td><span class="badge" style="background:#f1f5f9;color:#475569;">Step ${f.step}</span></td>
-      <td style="font-family:monospace; font-size:12px; color:#64748b;">${esc(f.field_name)}</td>
-      <td style="font-weight:600; max-width:200px;">${esc(f.label)}</td>
-      <td><span class="badge" style="background:#eff6ff;color:#1d4ed8;text-transform:uppercase;">${esc(f.field_type)}</span></td>
-      <td>${f.required ? '<span class="badge" style="background:#fef2f2;color:#dc2626;">YES</span>' : '<span class="badge" style="background:#f1f5f9;color:#94a3b8;">NO</span>'}</td>
-      <td>${f.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Hidden</span>'}</td>
-      <td>
-        <button class="action-btn-edit" onclick="openFieldModal(${f.id})"><i class="fa-solid fa-pen"></i> Edit</button>
-        <button class="action-btn-del" onclick="deleteField(${f.id})"><i class="fa-solid fa-trash"></i> Delete</button>
+  
+  // Sort incoming fields by step first, then sort_order
+  fields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
+
+  let html = '';
+  let lastStep = null;
+
+  fields.forEach((f, index) => {
+    // Header for "All Steps" view
+    if (activeStepFilter === 0 && f.step !== lastStep) {
+      const stepNames = { 1: 'Bio & Contact', 2: 'Startup Vision', 3: 'Incubation Needs' };
+      html += `<tr class="step-header-row" data-step-header="${f.step}"><td colspan="10" style="background:#f8fafc; padding:12px 24px; font-weight:700; color:#8B1A2E; font-size:12px;"><i class="fa-solid fa-layer-group"></i> STEP ${f.step} – ${stepNames[f.step] || 'General'}</td></tr>`;
+      lastStep = f.step;
+    }
+
+    const isFilteredView = activeStepFilter > 0;
+    html += `
+    <tr class="field-row" data-id="${f.id}" data-step="${f.step}">
+      <td class="drag-handle" style="${isFilteredView ? 'cursor:grab;' : 'display:none;'} color:#94a3b8; text-align:center; width:40px;"><i class="fa-solid fa-grip-vertical"></i></td>
+      <td class="order-label" style="color:#94a3b8; font-size:12px; text-align:center; width:60px;">${index + 1}</td>
+      <td style="width:100px; text-align:center;"><span class="badge" style="background:#f1f5f9; color:#475569; font-size:10px; width:70px; display:inline-block;">STEP ${f.step}</span></td>
+      <td style="font-family:monospace; font-size:11px; color:#64748b; width:150px;">${esc(f.field_name)}</td>
+      <td style="font-weight:600; color:#1e293b; min-width:200px;">${esc(f.label)}</td>
+      <td style="width:100px; text-align:center;"><span class="badge" style="background:#eff6ff; color:#1d4ed8; text-transform:uppercase; font-size:10px; min-width:60px; display:inline-block;">${esc(f.field_type)}</span></td>
+      <td style="width:60px; text-align:center;">${f.required ? '<i class="fa-solid fa-star" style="color:#dc2626; font-size:10px;"></i>' : '<i class="fa-regular fa-star" style="color:#cbd5e1; font-size:10px;"></i>'}</td>
+      <td style="width:120px; text-align:center;">${f.is_active ? '<span class="badge" style="background:#dcfce7; color:#166534; font-size:10px; width:80px; display:inline-block;"><i class="fa-solid fa-eye"></i> Active</span>' : '<span class="badge" style="background:#f1f5f9; color:#64748b; font-size:10px; width:80px; display:inline-block;"><i class="fa-solid fa-eye-slash"></i> Hidden</span>'}</td>
+      <td style="width:100px; text-align:right;">
+        <div style="display:flex; gap:5px; justify-content: flex-end;">
+          <button class="action-btn-edit" onclick="openFieldModal(${f.id})" title="Edit"><i class="fa-solid fa-pen"></i></button>
+          <button class="action-btn-del" onclick="deleteField(${f.id})" title="Delete"><i class="fa-solid fa-trash"></i></button>
+        </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+  // Always trigger initSortable when rendering is done
+  initSortable();
 }
 
 function openFieldModal(id) {
@@ -229,7 +358,7 @@ function openFieldModal(id) {
     document.getElementById('fld_label').value = '';
     document.getElementById('fld_placeholder').value = '';
     document.getElementById('fld_options').value = '';
-    document.getElementById('fld_order').value = '99';
+    document.getElementById('fld_width').value = '12';
     document.getElementById('fld_required').checked = true;
     document.getElementById('fld_active').checked = true;
     document.getElementById('row_field_name').style.display = '';
@@ -247,6 +376,7 @@ function openFieldModal(id) {
     document.getElementById('fld_placeholder').value = f.placeholder || '';
     document.getElementById('fld_options').value = f.options || '';
     document.getElementById('fld_order').value = f.sort_order;
+    document.getElementById('fld_width').value = f.column_width || '12';
     document.getElementById('fld_required').checked = !!f.required;
     document.getElementById('fld_active').checked = !!f.is_active;
     document.getElementById('row_field_name').style.display = 'none'; // can't change name of existing
@@ -274,43 +404,40 @@ async function saveField() {
     label: document.getElementById('fld_label').value.trim(),
     placeholder: document.getElementById('fld_placeholder').value.trim(),
     options: document.getElementById('fld_options').value.trim() || null,
-    sort_order: parseInt(document.getElementById('fld_order').value),
+    sort_order: parseInt(document.getElementById('fld_order').value) || 0,
+    column_width: parseInt(document.getElementById('fld_width').value) || 12,
     required: document.getElementById('fld_required').checked ? 1 : 0,
     is_active: document.getElementById('fld_active').checked ? 1 : 0,
   };
 
-  if (!payload.label) { alert('Label is required.'); return; }
-  if (!id && !payload.field_name) { alert('Field name is required.'); return; }
+  if (!payload.label) { showToast('Label is required'); return; }
+  if (!id && !payload.field_name) { showToast('Field name is required'); return; }
 
   try {
     const url = id ? `/api/admin/form-fields/${id}` : '/api/admin/form-fields';
     const method = id ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json();
     if (data.success) {
-      const msg = document.getElementById('fieldSaveMsg');
-      msg.textContent = id ? '✅ Field updated successfully!' : '✅ Field added successfully!';
-      msg.style.display = 'block';
-      setTimeout(() => closeFieldModal(), 1200);
+      showToast(id ? 'Field updated' : 'Field added');
+      closeFieldModal();
       await loadFormFields();
       filterStep(activeStepFilter);
-    } else {
-      alert('Error: ' + (data.message || 'Save failed'));
-    }
-  } catch (e) { alert('Error saving field.'); }
+    } else { showToast('Error: ' + (data.message || 'Save failed')); }
+  } catch (e) { showToast('Error saving field'); }
 }
 
 async function deleteField(id) {
-  if (!confirm('Delete this field? This cannot be undone.')) return;
+  if (!confirm('Are you sure you want to delete this field?')) return;
   try {
-    await fetch(`/api/admin/form-fields/${id}`, { method: 'DELETE' });
-    await loadFormFields();
-    filterStep(activeStepFilter);
-  } catch (e) { alert('Delete failed.'); }
+    const res = await fetch(`/api/admin/form-fields/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Field deleted');
+      await loadFormFields();
+      filterStep(activeStepFilter);
+    } else { showToast('Delete failed'); }
+  } catch (e) { showToast('Delete failed'); }
 }
 
 function esc(str) {
@@ -396,7 +523,7 @@ async function exportToExcel() {
     const apps = data.applications || [];
     
     if (apps.length === 0) {
-      alert("No data available to export based on current filters.");
+      showToast("No data available to export");
       return;
     }
 
@@ -425,7 +552,7 @@ async function exportToExcel() {
 
   } catch (e) {
     console.error('Export Error:', e);
-    alert('Failed to export data to Excel.');
+    showToast('Failed to export data');
   }
 }
 

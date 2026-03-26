@@ -24,11 +24,19 @@ async function loadCMSSettings() {
 
 async function loadDynamicFields() {
   try {
-    const res = await fetch('/api/form-fields');
+    // Add cache buster to ensure latest changes are fetched
+    const res = await fetch('/api/form-fields?t=' + Date.now());
     dynamicFieldsConfig = await res.json();
     
+    // Sort by step FIRST, then sort_order SECOND (Crucial Fix)
+    dynamicFieldsConfig.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
+
     const stepsGroup = { 1: [], 2: [], 3: [] };
-    dynamicFieldsConfig.forEach(f => stepsGroup[f.step].push(f));
+    dynamicFieldsConfig.forEach(f => {
+      if (stepsGroup[f.step]) {
+        stepsGroup[f.step].push(f);
+      }
+    });
 
     for (let s = 1; s <= 3; s++) {
       const container = id(`dynamicFieldsStep${s}`);
@@ -98,9 +106,17 @@ function renderField(f) {
       ${opts}
     </select>`;
   }
-
-  const colClass = (f.field_type === 'textarea' || f.step === 2) ? 'col-12' : 'col-md-6';
-  return `<div class="${colClass}"><div class="premium-field"><label for="${f.field_name}">${f.label} ${star}</label>${inputHtml}<div class="error-msg" id="err_${f.field_name}"></div></div></div>`;
+  const colWidth = f.column_width || (f.field_type === 'textarea' ? 12 : 6);
+  const colClass = `col-md-${colWidth}`;
+  
+  return `
+    <div class="${colClass} mb-3">
+      <div class="premium-field">
+        <label for="${f.field_name}">${f.label} ${star}</label>
+        ${inputHtml}
+        <div class="error-msg" id="err_${f.field_name}"></div>
+      </div>
+    </div>`;
 }
 
 function id(name) { return document.getElementById(name); }
