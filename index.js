@@ -28,11 +28,6 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // DB Setup
 const db = new Database(path.join(__dirname, 'mcc_incubation.db'));
-console.log('--- DB PATH INFO ---');
-console.log('__dirname:', __dirname);
-console.log('cwd:', process.cwd());
-console.log('db path:', path.join(__dirname, 'mcc_incubation.db'));
-console.log('--------------------');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS admins (
@@ -103,20 +98,20 @@ try {
   const row = db.prepare('SELECT COUNT(*) as c FROM form_fields').get();
   if (!row || row.c === 0) {
     console.log('--- SEEDING DEFAULT FORM FIELDS ---');
-    const insertField = db.prepare(`INSERT OR IGNORE INTO form_fields (step, field_type, field_name, label, placeholder, required, options, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+    const insertField = db.prepare(`INSERT OR IGNORE INTO form_fields (step, field_type, field_name, label, placeholder, required, options, sort_order, column_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const defaultFields = [
-      [1, 'text', 'applicant_name', 'Full Name of Applicant', 'John Doe', 1, null, 1],
-      [1, 'email', 'email', 'Email Address', 'john@example.com', 1, null, 2],
-      [1, 'tel', 'whatsapp', 'WhatsApp Number', '+91-0000000000', 1, null, 3],
-      [1, 'textarea', 'address', 'Correspondence Address', 'Full postal address', 1, null, 4],
-      [1, 'select', 'professional_status', 'Current Professional Status', 'Select your current status', 1, 'Student,Working professional,Entrepreneur,Faculty or Alumni of MCC', 5],
-      [2, 'text', 'startup_name', 'Name of Startup / Idea', 'Name of your venture', 1, null, 1],
-      [2, 'text', 'plan_to_grow', 'Future Growth Strategy', 'Your scale-up plan', 1, null, 2],
-      [3, 'text', 'financial_support', 'Has your startup received any financial support?', '', 1, null, 1],
-      [3, 'text', 'incubation_support', 'Has your startup received any incubation support earlier?', '', 1, null, 2],
-      [3, 'text', 'incubation_duration', 'Expected Incubation Duration', '', 1, null, 3],
-      [3, 'text', 'association_type', 'How would you like to associate with MCC MRF Innovation Park?', '', 1, null, 4],
-      [3, 'textarea', 'incubation_help', 'Brief on how incubation would help you', '', 1, null, 5],
+      [1, 'text', 'applicant_name', 'Full Name of Applicant', 'John Doe', 1, null, 1, 6],
+      [1, 'email', 'email', 'Email Address', 'john@example.com', 1, null, 2, 6],
+      [1, 'tel', 'whatsapp', 'WhatsApp Number', '+91-0000000000', 1, null, 3, 6],
+      [1, 'textarea', 'address', 'Correspondence Address', 'Full postal address', 1, null, 4, 12],
+      [1, 'select', 'professional_status', 'Current Professional Status', 'Select your current status', 1, 'Student,Working professional,Entrepreneur,Faculty or Alumni of MCC', 5, 6],
+      [2, 'text', 'startup_name', 'Name of Startup / Idea', 'Name of your venture', 1, null, 1, 6],
+      [2, 'text', 'plan_to_grow', 'Future Growth Strategy', 'Your scale-up plan', 1, null, 2, 6],
+      [3, 'text', 'financial_support', 'Has your startup received any financial support?', '', 1, null, 1, 6],
+      [3, 'text', 'incubation_support', 'Has your startup received any incubation support earlier?', '', 1, null, 2, 6],
+      [3, 'text', 'incubation_duration', 'Expected Incubation Duration', '', 1, null, 3, 6],
+      [3, 'text', 'association_type', 'How would you like to associate with MCC MRF Innovation Park?', '', 1, null, 4, 6],
+      [3, 'textarea', 'incubation_help', 'Brief on how incubation would help you', '', 1, null, 5, 12],
     ];
     defaultFields.forEach(f => insertField.run(...f));
     console.log('--- SEEDING COMPLETED ---');
@@ -341,23 +336,10 @@ app.get('/api/admin/form-fields', (req, res) => {
 // Create new field
 app.post('/api/admin/form-fields', (req, res) => {
   const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width } = req.body;
+  const defWidth = column_width || (field_type === 'textarea' || field_type === 'checkbox' || field_type === 'radio' ? 12 : 6);
   const stmt = db.prepare('INSERT INTO form_fields (step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const result = stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width || 12);
+  const result = stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, defWidth);
   res.json({ success: true, id: result.lastInsertRowid });
-});
-
-// Update field
-app.put('/api/admin/form-fields/:id', (req, res) => {
-  const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width } = req.body;
-  const stmt = db.prepare('UPDATE form_fields SET step = ?, field_type = ?, field_name = ?, label = ?, placeholder = ?, options = ?, sort_order = ?, required = ?, is_active = ?, column_width = ? WHERE id = ?');
-  stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width || 12, req.params.id);
-  res.json({ success: true });
-});
-
-// Delete field
-app.delete('/api/admin/form-fields/:id', requireAuth, (req, res) => {
-  db.prepare('DELETE FROM form_fields WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
 });
 
 // Bulk Reorder Fields - Stable Consolidated Version (Applied and Persisted)
@@ -370,19 +352,33 @@ app.put('/api/admin/form-fields/reorder', requireAuth, (req, res) => {
     const transaction = db.transaction((items) => {
       let count = 0;
       for (const item of items) {
-        const result = updateStmt.run(item.sort_order, item.step, item.id);
+        const result = updateStmt.run(Number(item.sort_order), Number(item.step), Number(item.id));
         if (result.changes > 0) count++;
       }
       return count;
     });
 
     const updatedCount = transaction(orders);
-    console.log(`[Reorder Success] Updated ${updatedCount} fields in the database.`);
+    console.log(`[Reorder Success] Updated ${updatedCount} fields.`);
     res.json({ success: true, updated: updatedCount });
   } catch (err) {
     console.error('[Reorder DB Error]:', err);
     res.json({ success: false, error: err.message });
   }
+});
+
+// Delete field
+app.delete('/api/admin/form-fields/:id', requireAuth, (req, res) => {
+  db.prepare('DELETE FROM form_fields WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// Update field
+app.put('/api/admin/form-fields/:id', requireAuth, (req, res) => {
+  const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width } = req.body;
+  const stmt = db.prepare('UPDATE form_fields SET step = ?, field_type = ?, field_name = ?, label = ?, placeholder = ?, options = ?, sort_order = ?, required = ?, is_active = ?, column_width = ? WHERE id = ?');
+  stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width || 12, req.params.id);
+  res.json({ success: true });
 });
 
 // CloudPanel-compatible listen logic - Using 3103 consistently
