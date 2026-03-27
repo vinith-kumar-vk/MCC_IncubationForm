@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const app = express();
 // CloudPanel-compatible configuration - Reverting to 3103
-const PORT = 3103; 
+const PORT = 3104;
 
 // Ensure directories exist
 const uploadDir = path.join(__dirname, 'public', 'uploads');
@@ -223,7 +223,7 @@ app.get('/api/applications', requireAuth, (req, res) => {
   const { search, status, page = 1, limit = 10, startDate, endDate } = req.query;
   let query = 'SELECT * FROM applications WHERE 1=1';
   const params = [];
-  
+
   if (search) {
     query += ' AND (applicant_name LIKE ? OR startup_name LIKE ? OR email LIKE ? OR professional_status LIKE ?)';
     params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
