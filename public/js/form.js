@@ -3,6 +3,15 @@ let currentStep = 1;
 const totalSteps = 4;
 let dynamicFieldsConfig = [];
 
+let step1TitleStr = "Application Form for Incubation @ MCCMRFIP";
+let step1SubStr = "Begin your entrepreneurship journey with us. Fill in your personal details below.";
+
+const stepTitles = {
+  2: { title: "Startup Vision", subtitle: "Share the problem you're solving and your solution." },
+  3: { title: "Incubation Support", subtitle: "Select the resources and support you need to succeed." },
+  4: { title: "Final Confirmation", subtitle: "Please review all information and sign the declaration." }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadCMSSettings();
   await loadDynamicFields();
@@ -15,8 +24,8 @@ async function loadCMSSettings() {
     const s = await res.json();
     const stitle = id('siteTitle'); if (stitle && s.site_title) stitle.textContent = s.site_title;
     const ssub = id('siteSubtitle'); if (ssub && s.site_subtitle) ssub.textContent = s.site_subtitle;
-    const ftitle = id('formTitle'); if (ftitle && s.form_title) ftitle.textContent = s.form_title;
-    const fsub = id('formSubtitle'); if (fsub && s.form_subtitle) fsub.textContent = s.form_subtitle;
+    const ftitle = id('formTitle'); if (ftitle && s.form_title) { ftitle.textContent = s.form_title; step1TitleStr = s.form_title; }
+    const fsub = id('formSubtitle'); if (fsub && s.form_subtitle) { fsub.textContent = s.form_subtitle; step1SubStr = s.form_subtitle; }
     const footer = id('footerText'); if (footer && s.footer_text) footer.textContent = s.footer_text;
     const logo = id('siteLogo'); if (logo && s.logo_path) logo.src = s.logo_path;
   } catch (e) { console.error('CMS Settings load error', e); }
@@ -150,6 +159,20 @@ function initFormLogic() {
     }
     progressBar.style.width = `${(currentStep / totalSteps) * 100}%`;
     currentStepText.textContent = currentStep;
+    
+    // Update sticky header title
+    const ftitle = id('formTitle');
+    const fsub = id('formSubtitle');
+    if (ftitle && fsub) {
+      if (currentStep === 1) {
+        ftitle.textContent = step1TitleStr;
+        fsub.textContent = step1SubStr;
+      } else {
+        ftitle.textContent = stepTitles[currentStep].title;
+        fsub.textContent = stepTitles[currentStep].subtitle;
+      }
+    }
+    
     document.querySelector('.form-container-scroll').scrollTop = 0;
   }
 
@@ -185,19 +208,61 @@ function initFormLogic() {
       const stepFields = dynamicFieldsConfig.filter(f => f.step === sNum && f.required);
       stepFields.forEach(f => {
         const el = id(f.field_name);
-        if (!el || el.value.trim()) return;
-        isValid = false;
-        showError(`err_${f.field_name}`, 'Required field');
-        el.classList.add('error');
+        if (!el) return;
+        
+        let val = el.value.trim();
+        
+        // 1. Required Check
+        if (!val) {
+          isValid = false;
+          showError(`err_${f.field_name}`, 'This field is required');
+          el.classList.add('error');
+          return;
+        }
+        
+        // 2. Format Validation
+        if (f.field_type === 'email') {
+          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailPattern.test(val)) {
+            isValid = false;
+            showError(`err_${f.field_name}`, 'Please enter a valid email address');
+            el.classList.add('error');
+          }
+        } 
+        else if (f.field_type === 'tel') {
+          // Allow spaces, +, - and digits. Typically 10 to 15 numbers long
+          const phonePattern = /^[+\d\s-]{10,15}$/;
+          if (!phonePattern.test(val)) {
+            isValid = false;
+            showError(`err_${f.field_name}`, 'Please enter a valid phone number (10-15 chars)');
+            el.classList.add('error');
+          }
+        }
       });
-      if (sNum === 2 && !id('startup_file').files[0]) {
-        isValid = false; showError('err_startup_file', 'Pitchdeck required');
+
+      if (sNum === 2) {
+        const fileInp = id('startup_file');
+        if (!fileInp.files[0]) {
+          isValid = false; showError('err_startup_file', 'Please upload your pitchdeck (PDF)');
+        } else if (fileInp.files[0].type !== 'application/pdf' && !fileInp.files[0].name.toLowerCase().endsWith('.pdf')) {
+          isValid = false; showError('err_startup_file', 'Only PDF files are allowed');
+        } else if (fileInp.files[0].size > 10 * 1024 * 1024) {
+          isValid = false; showError('err_startup_file', 'File size must be less than 10MB');
+        }
       }
       if (sNum === 3 && !document.querySelector('input[name="services_needed"]:checked')) {
-        isValid = false; showError('err_services', 'Select at least one');
+        isValid = false; showError('err_services', 'Please select at least one service');
       }
     } else {
-      if (!id('decl1').checked) { isValid = false; showError('err_declaration', 'Accept all terms'); }
+      // Step 4: Final Confirmation checks
+      const d1 = id('decl1')?.checked;
+      const d2 = id('decl2')?.checked;
+      const d3 = id('decl3')?.checked;
+      const d4 = id('decl4')?.checked;
+      if (!d1 || !d2 || !d3 || !d4) { 
+        isValid = false; 
+        showError('err_declaration', 'Please accept all declarations to proceed'); 
+      }
     }
     return isValid;
   }

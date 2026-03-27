@@ -434,12 +434,26 @@ body {
   }
 
   .login-left {
-    padding: 32px 24px;
+    padding: 40px 24px;
     min-height: unset;
+    align-items: center;
+    text-align: center;
+  }
+
+  .login-brand {
+    justify-content: center;
+  }
+
+  .login-brand-text {
+    align-items: center;
   }
 
   .login-tagline h2 {
     font-size: 24px;
+  }
+
+  .login-tagline p {
+    margin: 0 auto;
   }
 
   .login-stats {
@@ -453,12 +467,16 @@ body {
   .login-card {
     padding: 32px 24px 28px;
   }
+
+  .login-card-header {
+    text-align: center;
+  }
 }
 
 @media (max-width: 480px) {
   .login-brand {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
   }
 

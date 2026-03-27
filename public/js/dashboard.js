@@ -323,7 +323,7 @@ function renderFieldsTable(fields) {
     const isFilteredView = activeStepFilter > 0;
     html += `
     <tr class="field-row" data-id="${f.id}" data-step="${f.step}">
-      <td class="drag-handle" style="${isFilteredView ? 'cursor:grab;' : 'display:none;'} color:#94a3b8; text-align:center; width:40px;"><i class="fa-solid fa-grip-vertical"></i></td>
+      <td class="drag-handle" style="color:#94a3b8; text-align:center; width:40px;">${isFilteredView ? '<i class="fa-solid fa-grip-vertical" style="cursor:grab;"></i>' : ''}</td>
       <td class="order-label" style="color:#94a3b8; font-size:12px; text-align:center; width:60px;">${index + 1}</td>
       <td style="width:100px; text-align:center;"><span class="badge" style="background:#f1f5f9; color:#475569; font-size:10px; width:70px; display:inline-block;">STEP ${f.step}</span></td>
       <td style="font-family:monospace; font-size:11px; color:#64748b; width:150px;">${esc(f.field_name)}</td>
