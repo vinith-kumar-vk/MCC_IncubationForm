@@ -573,71 +573,226 @@ async function exportToExcel() {
 
 async function viewDetail(id) {
   try {
-    // Fetch both the application details and all configured fields to render dynamically
-    const [appRes, fRes] = await Promise.all([
+    const [appRes, fRes, sRes] = await Promise.all([
       fetch(`/api/applications/${id}`),
-      fetch('/api/admin/form-fields')
+      fetch('/api/admin/form-fields'),
+      fetch('/api/settings')
     ]);
     const app = await appRes.json();
     const fields = await fRes.json();
+    const settings = await sRes.json();
     
-    // Sort fields logically by Step and Sort Order
     fields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
 
     const modal = document.getElementById('detailModal');
     const body = document.getElementById('modalBody');
     const title = document.getElementById('modalTitle');
-    title.textContent = "Application: " + (app.applicant_name || 'N/A');
+    title.textContent = "Application Detail - " + (app.applicant_name || 'N/A');
     
-    // Parse dynamic JSON block if available (for dynamically created fields)
     let dynamicData = {};
     try { if (app.full_data) dynamicData = JSON.parse(app.full_data); } catch(e){}
 
-    // Build the Grid content dynamically based on Form Builder configuration!
-    let fieldsHtml = "";
-    fields.forEach(f => {
-       // Look up value: primarily from JSON dynamic data, then fallback to native columns
-       let val = dynamicData[f.field_name] || app[f.field_name] || 'Not specified';
-       if (Array.isArray(val)) val = val.join(', ');
-       
-       fieldsHtml += `
-         <div style="${f.column_width === 12 ? 'grid-column: 1 / -1;' : ''} background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">${esc(f.label)}</span>
-            <div style="margin-top:5px; font-size:14px; color:#1e293b; font-weight:600; white-space:pre-wrap;">${esc(val)}</div>
-         </div>
-       `;
+    // Construct the Tables based on Steps
+    const steps = [1, 2, 3];
+    const stepNames = { 1: 'APPLICANT PROFILE - PART I', 2: 'STARTUP VISION - PART II', 3: 'INCUBATION DETAILS - PART III' };
+    
+    let tablesHtml = "";
+    steps.forEach(stepNum => {
+      const stepFields = fields.filter(f => f.step === stepNum);
+      if (stepFields.length === 0 && stepNum !== 3) return;
+
+      tablesHtml += `
+        <div class="print-section">
+          <div class="section-title-bar">${stepNames[stepNum]}</div>
+          <table class="print-table">
+            <tbody>
+      `;
+
+      stepFields.forEach(f => {
+        let val = dynamicData[f.field_name] || app[f.field_name] || '-';
+        if (Array.isArray(val)) val = val.join(', ');
+        
+        tablesHtml += `
+          <tr>
+            <td class="field-label">${f.label.toUpperCase()}</td>
+            <td class="field-value">${esc(val)}</td>
+          </tr>
+        `;
+      });
+
+      if (stepNum === 3) {
+        tablesHtml += `
+          <tr>
+            <td class="field-label">SERVICES NEEDED</td>
+            <td class="field-value" style="color: #8B1A2E; font-weight: 700;">${esc(app.services_needed || 'Not specified')}</td>
+          </tr>
+        `;
+      }
+
+      tablesHtml += `</tbody></table></div>`;
     });
 
-    // Inject the hardcoded "services_needed" checkbox list manually at the end of Step 3
-    fieldsHtml += `
-       <div style="grid-column: 1 / -1; background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; border-left: 4px solid var(--maroon);">
-          <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Incubation Services Needed</span>
-          <div style="margin-top:5px; font-size:14px; color:#1e293b; font-weight:600; white-space:pre-wrap; color: var(--maroon);">${esc(app.services_needed || 'Not specified')}</div>
-       </div>
-    `;
+    // Handle Attachment Preview (Video, PDF, Image) - NO PRINT
+    let attachmentPreview = "";
+    if (app.file_path) {
+      const isPdf = app.file_path.toLowerCase().endsWith('.pdf');
+      const isVideo = ['.mp4', '.webm', '.ogg'].some(ext => app.file_path.toLowerCase().endsWith(ext));
+      const isImg = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].some(ext => app.file_path.toLowerCase().endsWith(ext));
 
-    const docPreview = app.file_path 
-      ? `<div style="margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc;" class="no-print">
-           <div style="padding: 10px 15px; background: #f1f5f9; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
-             <span style="font-weight: 600; font-size: 14px; color: #334155;"><i class="fa-solid fa-file-pdf"></i> Attached Document Preview</span>
-             <a href="${app.file_path}" target="_blank" download class="btn" style="background:#10b981; color:white; padding: 6px 12px; font-size: 12px; border-radius: 4px; text-decoration: none;">Download File</a>
-           </div>
-           <iframe src="${app.file_path}" width="100%" height="400px" style="border: none;"></iframe>
-         </div>` 
-      : '<div style="margin-top:20px; padding:15px; background:#fef2f2; border:1px solid #fecaca; color:#ef4444; border-radius:6px;" class="no-print">No attachment provided.</div>';
+      attachmentPreview = `<div class="no-print" style="margin-top: 30px; border-top: 2px dashed #ddd; padding-top: 20px;">
+        <h4 style="color: #64748b; font-size: 14px; margin-bottom: 12px;"><i class="fa-solid fa-paperclip"></i> Attachment Preview (Admin Only)</h4>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">`;
+
+      if (isPdf) {
+        attachmentPreview += `<iframe src="${app.file_path}" width="100%" height="500px" style="border: none;"></iframe>`;
+      } else if (isVideo) {
+        attachmentPreview += `<video controls style="width: 100%; max-height: 500px; display: block; outline: none; background: #000;"><source src="${app.file_path}" type="video/mp4">Your browser does not support video.</video>`;
+      } else if (isImg) {
+        attachmentPreview += `<img src="${app.file_path}" style="max-width: 100%; display: block; margin: 0 auto;">`;
+      } else {
+        attachmentPreview += `<div style="padding: 20px; text-align: center; color: #64748b;"><i class="fa-solid fa-file" style="font-size: 32px; margin-bottom: 10px; display: block;"></i> <a href="${app.file_path}" target="_blank" style="color: var(--mcc-maroon); font-weight: 600;">Download and View File</a></div>`;
+      }
+
+      attachmentPreview += `</div></div>`;
+    }
+
+    const appDate = new Date(app.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
     body.innerHTML = `
-      <div style="display:flex; justify-content:flex-end; margin-bottom:15px;" class="no-print">
-         <button onclick="window.print()" style="background:#1e293b; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; transition: 0.2s;"><i class="fa-solid fa-print"></i> Print / Save as PDF</button>
+      <div class="no-print" style="display:flex; justify-content:flex-end; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+         <button onclick="window.print()" class="print-btn-action"><i class="fa-solid fa-cloud-arrow-down"></i> SAVE AS PDF / PRINT</button>
       </div>
-      <style>@media print { .no-print { display: none !important; } .modal { border:none; box-shadow:none; } .modal-header { border:none;} .sidebar, .mobile-header, .filter-bar, .page-header { display:none !important; } .main-content { padding: 0 !important; margin: 0 !important; } }</style>
-      <div id="printArea" style="font-size: 14px; line-height: 1.6; display: grid; gap: 15px; grid-template-columns: 1fr 1fr;">
-        ${fieldsHtml}
+
+      <div id="mcc-print-container" class="mcc-application-document">
+        <!-- HEADER -->
+        <div class="mcc-print-header">
+           <div class="mcc-logo-container">
+              <img src="${settings.logo_path || '/images/logo.png'}" alt="Logo">
+           </div>
+           <div class="mcc-header-text">
+              <h1>MCC - MRF</h1>
+              <h1>INNOVATION PARK</h1>
+              <h3>Application form for Incubation @ MCCMRFIP</h3>
+           </div>
+        </div>
+
+        <div class="mcc-metadata-row">
+           <div class="meta-item main-name">
+              <span class="meta-label">NAME OF THE APPLICANT :</span>
+              <span class="meta-val highlight">${(app.applicant_name || 'N/A').toUpperCase()}</span>
+           </div>
+           <div class="meta-item-side">
+              <div class="side-item">
+                 <span class="meta-label">APPLICATION DATE</span>
+                 <span class="meta-val">${appDate}</span>
+              </div>
+           </div>
+        </div>
+
+        <!-- CONTENT TABLES -->
+        ${tablesHtml}
       </div>
-      ${docPreview}
+
+      ${attachmentPreview}
+
+      <style>
+        :root { --mcc-maroon: #8B1A2E; }
+        #detailModal .modal { background: #fff; border: none; }
+        
+        .print-btn-action {
+          background: #8B1A2E; color: white; border: none; padding: 10px 24px; border-radius: 8px;
+          font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+        }
+
+        .mcc-application-document {
+          width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto;
+          background: white; color: #000; font-family: 'Inter', Arial, sans-serif;
+          border: 1px solid #eee; position: relative;
+        }
+
+        .mcc-print-header { display: flex; align-items: center; gap: 20px; border-bottom: 2px solid var(--mcc-maroon); padding-bottom: 20px; margin-bottom: 25px; }
+        .mcc-logo-container img { height: 85px; width: auto; }
+        .mcc-header-text { flex-grow: 1; text-align: center; }
+        .mcc-header-text h1 { color: var(--mcc-maroon); font-size: 26px; font-weight: 800; margin: 0; line-height: 1.1; }
+        .mcc-header-text h3 { font-size: 12px; font-weight: 700; color: #1a1a1a; margin-top: 10px; opacity: 0.9; }
+
+        .mcc-metadata-row { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: none; padding-bottom: 15px; }
+        .meta-label { font-size: 10px; font-weight: 700; color: #666; margin-bottom: 2px; }
+        .meta-val { font-size: 13px; font-weight: 700; }
+        .meta-val.highlight { font-size: 20px; color: var(--mcc-maroon); font-weight: 800; }
+        .mcc-metadata-row .meta-item-side { display: flex; gap: 30px; text-align: right; }
+
+        .section-title-bar { background: var(--mcc-maroon); color: white; padding: 8px 15px; font-weight: 700; font-size: 12px; }
+        .print-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .print-table td { padding: 10px 15px; border: 1px solid #ddd; font-size: 12.5px; line-height: 1.4; }
+        .field-label { background: #f9f9f9; width: 35%; font-weight: 700; color: #333; text-transform: uppercase; font-size: 10px; }
+        .field-value { width: 65%; font-weight: 500; }
+
+        @media print {
+          .no-print { display: none !important; }
+          @page { size: A4; margin: 0; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 210mm;
+            background: #fff !important;
+            -webkit-print-color-adjust: exact;
+          }
+          .modal-overlay { 
+            position: static !important; 
+            display: block !important; 
+            background: #fff !important; 
+            padding: 0 !important; 
+            margin: 0 !important;
+          }
+          .modal { 
+            position: static !important; 
+            width: 100% !important; 
+            max-width: none !important; 
+            border: none !important; 
+            box-shadow: none !important; 
+            margin: 0 !important; 
+            padding: 0 !important;
+          }
+          .modal-header, .close-btn { display: none !important; }
+          .modal-body { padding: 0 !important; overflow: visible !important; }
+          .main-content, .sidebar, .mobile-header, .stat-card, .table-card, .card-header, .table-wrap { display: none !important; }
+          
+          .mcc-application-document { 
+            border: none !important; 
+            padding: 10mm 15mm !important; 
+            margin: 0 !important;
+            width: 100% !important;
+            min-height: auto !important;
+          }
+          
+          .mcc-print-header { 
+            margin-top: 0 !important;
+            padding-bottom: 15px !important; 
+            margin-bottom: 5px !important; 
+          }
+
+          .print-section { 
+            padding-top: 45px !important; 
+            page-break-inside: avoid !important;
+          }
+
+          .print-section:first-of-type {
+            padding-top: 0 !important;
+          }
+          
+          .print-table { 
+            page-break-inside: avoid !important;
+            margin-top: 5px !important;
+          }
+
+          .mcc-metadata-row { margin-bottom: 15px; padding-bottom: 15px; }
+          .print-table td { padding: 8px 15px; }
+          .section-title-bar { padding: 8px 15px; }
+        }
+      </style>
     `;
 
-    // Expand modal max-width gracefully
     modal.querySelector('.modal').style.maxWidth = '1000px';
     modal.classList.add('active');
 

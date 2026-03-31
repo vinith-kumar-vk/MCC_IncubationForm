@@ -83,15 +83,15 @@ db.exec(`
 
 // Seed default site settings
 const defaultSettings = [
-  { key: 'site_title', value: 'MCC-MRF' },
+  { key: 'site_title', value: 'MCC - MRF' },
   { key: 'site_subtitle', value: 'INNOVATION PARK' },
   { key: 'site_location', value: 'Madras Christian College' },
-  { key: 'form_title', value: 'Application Form for Incubation @ MCCMRFIP' },
-  { key: 'form_subtitle', value: 'Begin your entrepreneurship journey with us. Fill in your personal details below.' },
+  { key: 'form_title', value: 'Application form for Incubation @ MCCMRFIP' },
+  { key: 'form_subtitle', value: 'Begin your entrepreneurship journey with us.' },
   { key: 'logo_path', value: '/images/logo.png' },
-  { key: 'footer_text', value: '© 2026 Madras Christian College' }
+  { key: 'footer_text', value: '© 2026 Madras Christian College - Innovation Park' }
 ];
-const insertSetting = db.prepare('INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)');
+const insertSetting = db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)');
 defaultSettings.forEach(s => insertSetting.run(s.key, s.value));
 
 // Seed default form fields if table is empty
