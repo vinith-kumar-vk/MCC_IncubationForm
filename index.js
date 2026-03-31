@@ -54,6 +54,7 @@ db.exec(`
     incubation_duration TEXT,
     association_type TEXT,
     incubation_help TEXT,
+    full_data TEXT,
     status TEXT DEFAULT 'Pending',
     declaration_agreed INTEGER DEFAULT 0,
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -161,18 +162,19 @@ app.post('/api/apply', upload.single('startup_file'), (req, res) => {
       : (req.body.services_needed || '');
 
     const file_path = req.file ? '/uploads/' + req.file.filename : null;
+    const full_data = JSON.stringify(req.body); // Save everything the user submitted dynamically
 
     db.prepare(`
       INSERT INTO applications
       (applicant_name, startup_name, address, email, whatsapp, professional_status,
        plan_to_grow, services_needed, financial_support, incubation_support,
-       incubation_duration, association_type, incubation_help, file_path, declaration_agreed)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       incubation_duration, association_type, incubation_help, file_path, declaration_agreed, full_data)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      applicant_name, startup_name, address, email, whatsapp, professional_status,
+      applicant_name || 'N/A', startup_name || 'N/A', address || 'N/A', email || 'N/A', whatsapp || 'N/A', professional_status || 'N/A',
       plan_to_grow, services_needed, financial_support, incubation_support,
       incubation_duration, association_type, incubation_help, file_path,
-      declaration_agreed ? 1 : 0
+      declaration_agreed ? 1 : 0, full_data
     );
 
     res.json({ success: true, message: 'Application submitted successfully!' });
@@ -285,6 +287,11 @@ app.delete('/api/applications/:id', requireAuth, (req, res) => {
 try {
   db.prepare('ALTER TABLE form_fields ADD COLUMN column_width INTEGER DEFAULT 12').run();
   console.log('Database migrated: added column_width');
+} catch (e) { /* already exists */ }
+
+try {
+  db.prepare('ALTER TABLE applications ADD COLUMN full_data TEXT').run();
+  console.log('Database migrated: added full_data');
 } catch (e) { /* already exists */ }
 
 // Get all settings (public — used by form page)

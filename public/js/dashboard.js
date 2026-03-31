@@ -518,8 +518,14 @@ async function exportToExcel() {
       endDate: endDate
     });
 
-    const res = await fetch('/api/applications?' + queryParams.toString());
-    const data = await res.json();
+    // Fetch applications AND fields configuration concurrently for dynamic column generation
+    const [appRes, fRes] = await Promise.all([
+      fetch('/api/applications?' + queryParams.toString()),
+      fetch('/api/admin/form-fields')
+    ]);
+    
+    const data = await appRes.json();
+    const fields = await fRes.json();
     const apps = data.applications || [];
     
     if (apps.length === 0) {
@@ -527,23 +533,32 @@ async function exportToExcel() {
       return;
     }
 
-    const excelData = apps.map(app => ({
-      'ID': app.id,
-      'Date Submitted': new Date(app.submitted_at).toLocaleDateString(),
-      'Name': app.applicant_name,
-      'Email': app.email,
-      'WhatsApp': app.whatsapp,
-      'Startup Name': app.startup_name,
-      'Professional Status': app.professional_status,
-      'Growth Plan': app.plan_to_grow,
-      'Services Needed': app.services_needed,
-      'Financial Support': app.financial_support,
-      'Incubation Support': app.incubation_support,
-      'Incubation Duration': app.incubation_duration,
-      'Association Type': app.association_type,
-      'Incubation Help Needed': app.incubation_help,
-      'Status': app.status
-    }));
+    // Sort fields logically to match the Excel column sequence with the Form steps
+    fields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
+
+    const excelData = apps.map(app => {
+      let dynamicData = {};
+      try { if (app.full_data) dynamicData = JSON.parse(app.full_data); } catch(e){}
+
+      // Build row structure dynamically
+      const row = {
+        'ID': app.id,
+        'Date Submitted': new Date(app.submitted_at).toLocaleDateString()
+      };
+
+      // Form builder columns mapping
+      fields.forEach(f => {
+        let val = dynamicData[f.field_name] || app[f.field_name] || 'Not specified';
+        if (Array.isArray(val)) val = val.join(', ');
+        row[f.label] = val; // The field's Label naturally becomes the Excel Column Header!
+      });
+
+      // Inject hardcoded static fields
+      row['Incubation Services Needed'] = app.services_needed || 'Not specified';
+      row['Status'] = app.status;
+      
+      return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -556,78 +571,79 @@ async function exportToExcel() {
   }
 }
 
-function viewDetail(id) {
-  fetch(`/api/applications/${id}`)
-    .then(r => r.json())
-    .then(app => {
-      const modal = document.getElementById('detailModal');
-      const body = document.getElementById('modalBody');
-      const title = document.getElementById('modalTitle');
-      title.textContent = "Application: " + app.applicant_name;
-      
-      const docPreview = app.file_path 
-        ? `<div style="margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc;">
-             <div style="padding: 10px 15px; background: #f1f5f9; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
-               <span style="font-weight: 600; font-size: 14px; color: #334155;"><i class="fa-solid fa-file-pdf"></i> Attached Document Preview</span>
-               <a href="${app.file_path}" target="_blank" download class="btn" style="background:#10b981; color:white; padding: 6px 12px; font-size: 12px; border-radius: 4px; text-decoration: none;">Download File</a>
-             </div>
-             <iframe src="${app.file_path}" width="100%" height="400px" style="border: none;"></iframe>
-           </div>` 
-        : '<div style="margin-top:20px; padding:15px; background:#fef2f2; border:1px solid #fecaca; color:#ef4444; border-radius:6px;">No attachment provided.</div>';
+async function viewDetail(id) {
+  try {
+    // Fetch both the application details and all configured fields to render dynamically
+    const [appRes, fRes] = await Promise.all([
+      fetch(`/api/applications/${id}`),
+      fetch('/api/admin/form-fields')
+    ]);
+    const app = await appRes.json();
+    const fields = await fRes.json();
+    
+    // Sort fields logically by Step and Sort Order
+    fields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
 
-      body.innerHTML = `
-        <div style="font-size: 14px; line-height: 1.6; display: grid; gap: 15px; grid-template-columns: 1fr 1fr;">
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Startup Name</span>
-             <strong style="font-size: 15px;">${esc(app.startup_name)}</strong>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Email Address</span>
-             <strong>${esc(app.email)}</strong>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Phone Number</span>
-             <strong>${esc(app.whatsapp)}</strong>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Professional Status</span>
-             <strong>${esc(app.professional_status)}</strong>
-          </div>
-          <div style="grid-column: 1 / -1; background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Services Needed</span>
-             <strong>${esc(app.services_needed || 'N/A')}</strong>
-          </div>
-          <div style="grid-column: 1 / -1; background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Plan to Grow</span>
-             <div style="margin-top:5px;">${esc(app.plan_to_grow || 'N/A')}</div>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Financial Support</span>
-             <strong>${esc(app.financial_support)}</strong>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Incubation Support Needed</span>
-             <strong>${esc(app.incubation_support)}</strong>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Duration</span>
-             <strong>${esc(app.incubation_duration)}</strong>
-          </div>
-          <div style="background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Association Type</span>
-             <strong>${esc(app.association_type)}</strong>
-          </div>
-          <div style="grid-column: 1 / -1; background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-             <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Pitch/Company Brief</span>
-             <div style="margin-top:5px; white-space:pre-wrap;">${esc(app.incubation_help)}</div>
-          </div>
-        </div>
-        ${docPreview}
-      `;
-      // Expand modal max-width gracefully if possible
-      modal.querySelector('.modal').style.maxWidth = '1000px';
-      modal.classList.add('active');
+    const modal = document.getElementById('detailModal');
+    const body = document.getElementById('modalBody');
+    const title = document.getElementById('modalTitle');
+    title.textContent = "Application: " + (app.applicant_name || 'N/A');
+    
+    // Parse dynamic JSON block if available (for dynamically created fields)
+    let dynamicData = {};
+    try { if (app.full_data) dynamicData = JSON.parse(app.full_data); } catch(e){}
+
+    // Build the Grid content dynamically based on Form Builder configuration!
+    let fieldsHtml = "";
+    fields.forEach(f => {
+       // Look up value: primarily from JSON dynamic data, then fallback to native columns
+       let val = dynamicData[f.field_name] || app[f.field_name] || 'Not specified';
+       if (Array.isArray(val)) val = val.join(', ');
+       
+       fieldsHtml += `
+         <div style="${f.column_width === 12 ? 'grid-column: 1 / -1;' : ''} background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">${esc(f.label)}</span>
+            <div style="margin-top:5px; font-size:14px; color:#1e293b; font-weight:600; white-space:pre-wrap;">${esc(val)}</div>
+         </div>
+       `;
     });
+
+    // Inject the hardcoded "services_needed" checkbox list manually at the end of Step 3
+    fieldsHtml += `
+       <div style="grid-column: 1 / -1; background:#f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; border-left: 4px solid var(--maroon);">
+          <span style="display:block; font-size:11px; color:#64748b; text-transform:uppercase; font-weight:600;">Incubation Services Needed</span>
+          <div style="margin-top:5px; font-size:14px; color:#1e293b; font-weight:600; white-space:pre-wrap; color: var(--maroon);">${esc(app.services_needed || 'Not specified')}</div>
+       </div>
+    `;
+
+    const docPreview = app.file_path 
+      ? `<div style="margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #f8fafc;" class="no-print">
+           <div style="padding: 10px 15px; background: #f1f5f9; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+             <span style="font-weight: 600; font-size: 14px; color: #334155;"><i class="fa-solid fa-file-pdf"></i> Attached Document Preview</span>
+             <a href="${app.file_path}" target="_blank" download class="btn" style="background:#10b981; color:white; padding: 6px 12px; font-size: 12px; border-radius: 4px; text-decoration: none;">Download File</a>
+           </div>
+           <iframe src="${app.file_path}" width="100%" height="400px" style="border: none;"></iframe>
+         </div>` 
+      : '<div style="margin-top:20px; padding:15px; background:#fef2f2; border:1px solid #fecaca; color:#ef4444; border-radius:6px;" class="no-print">No attachment provided.</div>';
+
+    body.innerHTML = `
+      <div style="display:flex; justify-content:flex-end; margin-bottom:15px;" class="no-print">
+         <button onclick="window.print()" style="background:#1e293b; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; transition: 0.2s;"><i class="fa-solid fa-print"></i> Print / Save as PDF</button>
+      </div>
+      <style>@media print { .no-print { display: none !important; } .modal { border:none; box-shadow:none; } .modal-header { border:none;} .sidebar, .mobile-header, .filter-bar, .page-header { display:none !important; } .main-content { padding: 0 !important; margin: 0 !important; } }</style>
+      <div id="printArea" style="font-size: 14px; line-height: 1.6; display: grid; gap: 15px; grid-template-columns: 1fr 1fr;">
+        ${fieldsHtml}
+      </div>
+      ${docPreview}
+    `;
+
+    // Expand modal max-width gracefully
+    modal.querySelector('.modal').style.maxWidth = '1000px';
+    modal.classList.add('active');
+
+  } catch (err) {
+    console.error("Error drawing dynamic popup view:", err);
+  }
 }
 
 function closeDetailModal() {
