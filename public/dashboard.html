@@ -330,7 +330,7 @@
 </div>
 
 <!-- Field Edit Modal -->
-<div class="modal-overlay" id="fieldModal">
+<div class="modal-overlay no-print" id="fieldModal">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
       <h2 id="fieldModalTitle">Add Field</h2>
@@ -361,15 +361,15 @@
           <option value="url">URL</option>
         </select>
       </div>
-      <div class="cms-field">
+      <div class="cms-field" style="display:none;">
         <label>Display Layout (Column Width)</label>
         <select id="fld_width" class="cms-input">
           <option value="12">Full Width (1 Row)</option>
-          <option value="6">Half Width (2 per Row)</option>
+          <option value="6" selected>Half Width (2 per Row)</option>
         </select>
       </div>
 
-      <div class="cms-field" id="row_field_name">
+      <div class="cms-field" id="row_field_name" style="display:none;">
         <label>Field Name (unique key, no spaces)</label>
         <input type="text" id="fld_name" class="cms-input" placeholder="e.g. applicant_name">
       </div>
@@ -377,8 +377,8 @@
         <label>Label (shown to user)</label>
         <input type="text" id="fld_label" class="cms-input" placeholder="e.g. Full Name of Applicant">
       </div>
-      <div class="cms-field">
-        <label>Placeholder</label>
+      <div class="cms-field" style="display:none;">
+        <label>Placeholder (hint in input)</label>
         <input type="text" id="fld_placeholder" class="cms-input" placeholder="e.g. John Doe">
       </div>
       <div class="cms-field" id="row_options" style="display:none;">
@@ -387,8 +387,8 @@
       </div>
       <!-- Sort Order hidden as we use drag and drop now -->
       <input type="hidden" id="fld_order" value="1">
-      <div class="cms-field" style="display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" id="fld_required" style="width:16px; height:16px;">
+      <div class="cms-field" style="display:none; align-items:center; gap:10px;">
+        <input type="checkbox" id="fld_required" style="width:16px; height:16px;" checked>
         <label for="fld_required" style="margin:0; font-weight:500;">Required field?</label>
       </div>
       <div class="cms-field" style="display:flex; align-items:center; gap:10px;" id="row_active">

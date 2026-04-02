@@ -111,12 +111,9 @@ try {
       [1, 'textarea', 'address', 'Correspondence Address', 'Full postal address', 1, null, 4, 12],
       [1, 'select', 'professional_status', 'Current Professional Status', 'Select your current status', 1, 'Student,Working professional,Entrepreneur,Faculty or Alumni of MCC', 5, 6],
       [2, 'text', 'startup_name', 'Name of Startup / Idea', 'Name of your venture', 1, null, 1, 6],
-      [2, 'text', 'plan_to_grow', 'Future Growth Strategy', 'Your scale-up plan', 1, null, 2, 6],
       [3, 'radio', 'financial_support', 'Has your startup received any financial support?', '', 1, 'Yes; No', 1, 6],
       [3, 'radio', 'incubation_status', 'Have you joined any incubator / accelerator program earlier?', '', 1, 'Yes; No', 2, 6],
       [3, 'checkbox', 'services_needed', 'Please select the incubation services that you need:', '', 1, 'Office Space; Mentor Support; Market Access; Lab Equipment & Technical Access; Professional Business Services (IP, Auditing, etc); Fundraising Assistance', 3, 12],
-      [3, 'textarea', 'incubation_duration', 'How long (approx. months) would you like to be incubated?', '', 1, null, 4, 12],
-      [3, 'textarea', 'incubation_help', 'Brief on how incubation would help you', '', 1, null, 5, 12],
     ];
     defaultFields.forEach(f => insertField.run(...f));
     console.log('--- SEEDING COMPLETED ---');

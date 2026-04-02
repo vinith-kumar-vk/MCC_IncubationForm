@@ -397,11 +397,19 @@ function toggleOptionsRow() {
 
 async function saveField() {
   const id = document.getElementById('fld_id').value;
+  const label = document.getElementById('fld_label').value.trim();
+  let name = document.getElementById('fld_name').value.trim().replace(/\s+/g, '_').toLowerCase();
+  
+  // Auto-generate name from label if name is missing (for simplified UI)
+  if (!name && label) {
+    name = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  }
+
   const payload = {
     step: parseInt(document.getElementById('fld_step').value),
     field_type: document.getElementById('fld_type').value,
-    field_name: document.getElementById('fld_name').value.trim().replace(/\s+/g, '_'),
-    label: document.getElementById('fld_label').value.trim(),
+    field_name: name,
+    label,
     placeholder: document.getElementById('fld_placeholder').value.trim(),
     options: document.getElementById('fld_options').value.trim() || null,
     sort_order: parseInt(document.getElementById('fld_order').value) || 0,
@@ -411,7 +419,7 @@ async function saveField() {
   };
 
   if (!payload.label) { showToast('Label is required'); return; }
-  if (!id && !payload.field_name) { showToast('Field name is required'); return; }
+  if (!id && !payload.field_name) { showToast('Please enter a valid field label'); return; }
 
   try {
     const url = id ? `/api/admin/form-fields/${id}` : '/api/admin/form-fields';
@@ -532,7 +540,9 @@ async function exportToExcel() {
       showToast("No data available to export");
       return;
     }
-
+    // Filter for active fields only as per user request (Hide fields with is_active = 0)
+    fields = fields.filter(f => f.is_active === 1);
+    
     // Sort fields logically to match the Excel column sequence with the Form steps
     fields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
 
@@ -553,8 +563,7 @@ async function exportToExcel() {
         row[f.label] = val; // The field's Label naturally becomes the Excel Column Header!
       });
 
-      // Inject hardcoded static fields
-      row['Incubation Services Needed'] = app.services_needed || 'Not specified';
+      // Removed redundant hardcoded services row to avoid duplication
       row['Status'] = app.status;
       
       return row;
@@ -579,9 +588,11 @@ async function viewDetail(id) {
       fetch('/api/settings')
     ]);
     const app = await appRes.json();
-    const fields = await fRes.json();
+    let fields = await fRes.json();
     const settings = await sRes.json();
     
+    // Filter for active fields only as per user request (Hide fields with is_active = 0)
+    fields = fields.filter(f => f.is_active === 1);
     fields.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
 
     const modal = document.getElementById('detailModal');
@@ -609,9 +620,15 @@ async function viewDetail(id) {
       `;
 
       stepFields.forEach(f => {
-        let val = dynamicData[f.field_name] || app[f.field_name] || '-';
+        // Skip redundant fields already shown in header
+        if (f.field_name === 'applicant_name') return;
+        
+        let val = dynamicData[f.field_name] || app[f.field_name] || null;
         if (Array.isArray(val)) val = val.join(', ');
         
+        // Skip rendering if value is empty or just a placeholder '-'
+        if (!val || val === '-' || val === 'Not specified') return;
+
         tablesHtml += `
           <tr>
             <td class="field-label">${f.label.toUpperCase()}</td>
@@ -620,14 +637,7 @@ async function viewDetail(id) {
         `;
       });
 
-      if (stepNum === 3) {
-        tablesHtml += `
-          <tr>
-            <td class="field-label">SERVICES NEEDED</td>
-            <td class="field-value" style="color: #8B1A2E; font-weight: 700;">${esc(app.services_needed || 'Not specified')}</td>
-          </tr>
-        `;
-      }
+      // Removed redundant hardcoded services row to avoid duplication
 
       tablesHtml += `</tbody></table></div>`;
     });
@@ -736,15 +746,16 @@ async function viewDetail(id) {
         .meta-val.highlight { font-size: 20px; color: var(--mcc-maroon); font-weight: 800; }
         .mcc-metadata-row .meta-item-side { display: flex; gap: 30px; text-align: right; }
 
-        .section-title-bar { background: var(--mcc-maroon); color: white; padding: 8px 15px; font-weight: 700; font-size: 12px; }
-        .print-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .section-title-bar { background: var(--mcc-maroon); color: white; padding: 8px 15px; font-weight: 700; font-size: 12px; page-break-after: avoid; }
+        .print-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: auto; }
+        .print-table tr { page-break-inside: avoid; page-break-after: auto; }
         .print-table td { padding: 10px 15px; border: 1px solid #ddd; font-size: 12.5px; line-height: 1.4; }
         .field-label { background: #f9f9f9; width: 35%; font-weight: 700; color: #333; text-transform: uppercase; font-size: 10px; }
         .field-value { width: 65%; font-weight: 500; }
 
         @media print {
           .no-print { display: none !important; }
-          @page { size: A4; margin: 0; }
+          @page { size: A4; margin: 10mm 5mm; }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
