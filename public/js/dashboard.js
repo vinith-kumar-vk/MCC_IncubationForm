@@ -755,7 +755,7 @@ async function viewDetail(id) {
 
         @media print {
           .no-print { display: none !important; }
-          @page { size: A4; margin: 10mm 5mm; }
+          @page { size: A4; margin: 0; }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
@@ -763,7 +763,7 @@ async function viewDetail(id) {
             background: #fff !important;
             -webkit-print-color-adjust: exact;
           }
-          .modal-overlay { 
+          #detailModal.modal-overlay { 
             position: static !important; 
             display: block !important; 
             background: #fff !important; 
@@ -781,7 +781,7 @@ async function viewDetail(id) {
           }
           .modal-header, .close-btn { display: none !important; }
           .modal-body { padding: 0 !important; overflow: visible !important; }
-          .main-content, .sidebar, .mobile-header, .stat-card, .table-card, .card-header, .table-wrap { display: none !important; }
+          .layout-wrapper, .modal-overlay:not(#detailModal), .main-content, .sidebar, .mobile-header, .stat-card, .table-card, .card-header, .table-wrap, .filter-bar, .cms-toast { display: none !important; }
           
           .mcc-application-document { 
             border: none !important; 
