@@ -75,25 +75,8 @@ async function loadDynamicFields() {
       }
       
       // Step 3 services - special fixed field
-      if (s === 3) {
-        html = `
-          <div class="premium-field mb-4 w-100">
-            <label class="mb-3">Please select the incubation services that you need: <span class="required-star">*</span></label>
-            <div class="checkbox-multi-select g-3 row">
-              ${['Office Space','Maker Space','Mentor Access','Lab equipment / Tech Support','Business / Network / Marketing','Seed money Assistance'].map((svc, i) => `
-                <div class="col-md-6 col-lg-4">
-                  <div class="premium-check-card">
-                    <input type="checkbox" name="services_needed" value="${svc}" id="svc${i}" />
-                    <label for="svc${i}"><span>${svc}</span></label>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-            <div class="error-msg mt-2" id="err_services"></div>
-          </div>
-        ` + html;
-      }
-
+      // Step 3 services - removed to avoid duplication with dynamic form builder
+      
       container.innerHTML = html;
     }
   } catch (e) { console.error('Dynamic fields load error', e); }
@@ -114,8 +97,77 @@ function renderField(f) {
       <option value="" disabled selected>${f.placeholder || 'Select...'}</option>
       ${opts}
     </select>`;
+  } else if (f.field_type === 'radio' || f.field_type === 'checkbox') {
+    const opts = (f.options || '').split(';').map(o => o.trim());
+    const inputType = f.field_type;
+    const itemsHtml = opts.map((opt, i) => {
+      const fieldId = `${f.field_name}_${i}`;
+      // Special handlers for conditional fields
+      let onchangeAttr = '';
+      const lowLabel = (f.label || '').toLowerCase();
+      const lowName = (f.field_name || '').toLowerCase();
+      if (lowName.includes('financial') || lowLabel.includes('financial support')) {
+        onchangeAttr = `onchange="toggleFinancialProof(this.value)"`;
+      } else if (lowName.includes('incubation') || lowLabel.includes('incubator') || lowLabel.includes('accelerator')) {
+        onchangeAttr = `onchange="toggleIncubationSupport(this.value)"`;
+      }
+      
+      // Consistent 3-column layout for services as requested
+      let itemColClass = 'col-md-4'; 
+      if (lowName.includes('services') || lowLabel.includes('services')) {
+        itemColClass = 'col-md-4'; 
+      } else if (f.field_type === 'radio') {
+        itemColClass = 'col-md-6';
+      }
+
+      return `
+        <div class="${itemColClass}">
+          <div class="premium-check-card">
+            <input type="${inputType}" name="${f.field_name}" value="${opt}" id="${fieldId}" ${reqAttr} ${onchangeAttr} />
+            <label for="${fieldId}"><span>${opt}</span></label>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    inputHtml = `<div class="row g-3 mt-1">${itemsHtml}</div>`;
+    
+    const lowLabel = (f.label || '').toLowerCase();
+    const lowName = (f.field_name || '').toLowerCase();
+
+    // If it's financial support, append the hidden proof upload field
+    if (lowName.includes('financial') || lowLabel.includes('financial support')) {
+      inputHtml += `
+        <div id="financialProofSection" class="mt-4 financial-proof-zone mb-2" style="display:none;">
+          <label class="mb-2 fw-bold small text-uppercase opacity-75">Upload Proof Document (PDF) <span class="required-star">*</span></label>
+          <div class="file-premium-zone dynamic-upload-area p-3 border rounded-3 bg-white" onclick="document.getElementById('financial_proof').click()" style="cursor:pointer; border: 2px dashed #e2e8f0 !important;">
+            <div class="d-flex align-items-center gap-3">
+              <div class="icon-circle" style="width:40px; height:40px; font-size:16px;">📄</div>
+              <div>
+                <p class="mb-0 fw-bold small" id="proofFileName">Click to upload proof document</p>
+                <p class="mb-0 text-muted" style="font-size:11px;">Official grant/investment letter (PDF only, max 5MB)</p>
+              </div>
+            </div>
+            <input type="file" name="financial_proof" id="financial_proof" class="d-none" accept=".pdf" onchange="document.getElementById('proofFileName').textContent = this.files[0]?.name || ''" />
+          </div>
+          <div class="error-msg mt-1" id="err_financial_proof"></div>
+        </div>
+      `;
+    }
+
+    // If it's incubation status, append the incubator name field
+    if (lowName.includes('incubation') || lowLabel.includes('incubator') || lowLabel.includes('accelerator')) {
+      inputHtml += `
+        <div id="incubationDetailsSection" class="mt-4 financial-proof-zone mb-2" style="display:none;">
+          <label class="mb-2 fw-bold small text-uppercase opacity-75">Specify Incubator / Accelerator Name <span class="required-star">*</span></label>
+          <input type="text" name="previous_incubator_name" id="previous_incubator_name" class="form-control premium-input" placeholder="e.g. T-Hub, StartupTN, IIT Incubator etc." />
+          <div class="error-msg mt-1" id="err_previous_incubator_name"></div>
+        </div>
+      `;
+    }
   }
-  const colWidth = f.column_width || (f.field_type === 'textarea' ? 12 : 6);
+
+  const colWidth = f.column_width || (['textarea', 'radio', 'checkbox'].includes(f.field_type) ? 12 : 6);
   const colClass = `col-md-${colWidth}`;
   
   return `
@@ -126,6 +178,18 @@ function renderField(f) {
         <div class="error-msg" id="err_${f.field_name}"></div>
       </div>
     </div>`;
+}
+
+function toggleFinancialProof(val) {
+  // Logic handled by the general toggle conditional function if needed, 
+  // but for simplicity we keep these specific ones for the requested fields.
+  const section = document.getElementById('financialProofSection');
+  if (section) section.style.display = val.toLowerCase() === 'yes' ? 'block' : 'none';
+}
+
+function toggleIncubationSupport(val) {
+  const section = document.getElementById('incubationDetailsSection');
+  if (section) section.style.display = val.toLowerCase() === 'yes' ? 'block' : 'none';
 }
 
 function id(name) { return document.getElementById(name); }
@@ -250,8 +314,43 @@ function initFormLogic() {
           isValid = false; showError('err_startup_file', 'File size must be less than 10MB');
         }
       }
-      if (sNum === 3 && !document.querySelector('input[name="services_needed"]:checked')) {
-        isValid = false; showError('err_services', 'Please select at least one service');
+      if (sNum === 3) {
+        if (!document.querySelector('input[name="services_needed"]:checked')) {
+          isValid = false; showError('err_services', 'Please select at least one service');
+        }
+        
+        // Dynamic conditional validation based on keywords
+        dynamicFieldsConfig.filter(f => f.step === 3).forEach(f => {
+          const lowLabel = (f.label || '').toLowerCase();
+          const lowName = (f.field_name || '').toLowerCase();
+          const val = document.querySelector(`input[name="${f.field_name}"]:checked`)?.value?.toLowerCase();
+          
+          if (val === 'yes') {
+            if (lowName.includes('financial') || lowLabel.includes('financial support')) {
+              const proofInp = id('financial_proof');
+              if (!proofInp?.files[0]) {
+                isValid = false; showError('err_financial_proof', 'Please upload your proof document (PDF)');
+              } else if (proofInp.files[0].size > 5 * 1024 * 1024) {
+                isValid = false; showError('err_financial_proof', 'File size must be less than 5MB');
+              }
+            } else if (lowName.includes('incubation') || lowLabel.includes('incubator') || lowLabel.includes('accelerator')) {
+              const incNameInp = id('previous_incubator_name');
+              if (!incNameInp?.value.trim()) {
+                isValid = false;
+                showError('err_previous_incubator_name', 'Please specify the incubator name');
+                incNameInp?.classList.add('error');
+              }
+            }
+          }
+          
+          // Always validate "Services" field if label contains 'services'
+          if (lowLabel.includes('services') && f.field_type === 'checkbox') {
+            if (!document.querySelector(`input[name="${f.field_name}"]:checked`)) {
+              isValid = false;
+              showError(`err_${f.field_name}`, 'Please select at least one service');
+            }
+          }
+        });
       }
     } else {
       // Step 4: Final Confirmation checks

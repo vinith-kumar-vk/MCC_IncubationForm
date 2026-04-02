@@ -198,9 +198,9 @@ h4,
 }
 
 .form-content-wrapper {
-  max-width: 1000px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 30px 60px 0 60px;
+  padding: 30px 50px 0 50px;
 }
 
 /* Progress Bar */
@@ -642,4 +642,46 @@ h4,
   .sidebar-brand-name {
     font-size: 20px;
   }
+}
+
+/* ─── DYNAMIC UPLOAD & CONDITIONAL FIELDS ─── */
+.financial-proof-zone {
+  animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dynamic-upload-area {
+  transition: all 0.3s ease;
+  background: #f8fafc !important;
+}
+
+.dynamic-upload-area:hover {
+  border-color: var(--mcc-maroon) !important;
+  background: #fff !important;
+  box-shadow: 0 4px 12px rgba(117, 20, 33, 0.05);
+}
+
+.dynamic-upload-area .icon-circle {
+  transition: all 0.3s ease;
+}
+
+.dynamic-upload-area:hover .icon-circle {
+  background: var(--mcc-maroon);
+  color: white;
+  border-color: var(--mcc-maroon);
+}
+
+.financial-proof-zone .required-star {
+  font-size: 14px;
 }

@@ -656,6 +656,20 @@ async function viewDetail(id) {
       attachmentPreview += `</div></div>`;
     }
 
+    // Handle Financial Proof Preview
+    if (app.financial_proof_path) {
+      const isPdf = app.financial_proof_path.toLowerCase().endsWith('.pdf');
+      attachmentPreview += `<div class="no-print" style="margin-top: 20px; border-top: 2px dashed #ddd; padding-top: 20px;">
+        <h4 style="color: #64748b; font-size: 14px; margin-bottom: 12px;"><i class="fa-solid fa-money-bill-transfer"></i> Financial Proof (Admin Only)</h4>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">`;
+      if (isPdf) {
+        attachmentPreview += `<iframe src="${app.financial_proof_path}" width="100%" height="400px" style="border: none;"></iframe>`;
+      } else {
+        attachmentPreview += `<div style="padding: 20px; text-align: center; color: #64748b;"><i class="fa-solid fa-file-contract" style="font-size: 32px; margin-bottom: 10px; display: block;"></i> <a href="${app.financial_proof_path}" target="_blank" style="color: var(--mcc-maroon); font-weight: 600;">View Financial Proof Document</a></div>`;
+      }
+      attachmentPreview += `</div></div>`;
+    }
+
     const appDate = new Date(app.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
     body.innerHTML = `

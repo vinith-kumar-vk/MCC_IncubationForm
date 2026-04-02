@@ -55,6 +55,7 @@ db.exec(`
     association_type TEXT,
     incubation_help TEXT,
     full_data TEXT,
+    financial_proof_path TEXT,
     status TEXT DEFAULT 'Pending',
     declaration_agreed INTEGER DEFAULT 0,
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -80,6 +81,9 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// ─── DATABASE MIGRATION (Ensure new columns exist) ───────────────────────────
+try { db.exec("ALTER TABLE applications ADD COLUMN financial_proof_path TEXT;"); } catch(e) {}
 
 // Seed default site settings
 const defaultSettings = [
@@ -108,10 +112,10 @@ try {
       [1, 'select', 'professional_status', 'Current Professional Status', 'Select your current status', 1, 'Student,Working professional,Entrepreneur,Faculty or Alumni of MCC', 5, 6],
       [2, 'text', 'startup_name', 'Name of Startup / Idea', 'Name of your venture', 1, null, 1, 6],
       [2, 'text', 'plan_to_grow', 'Future Growth Strategy', 'Your scale-up plan', 1, null, 2, 6],
-      [3, 'text', 'financial_support', 'Has your startup received any financial support?', '', 1, null, 1, 6],
-      [3, 'text', 'incubation_support', 'Has your startup received any incubation support earlier?', '', 1, null, 2, 6],
-      [3, 'text', 'incubation_duration', 'Expected Incubation Duration', '', 1, null, 3, 6],
-      [3, 'text', 'association_type', 'How would you like to associate with MCC MRF Innovation Park?', '', 1, null, 4, 6],
+      [3, 'radio', 'financial_support', 'Has your startup received any financial support?', '', 1, 'Yes; No', 1, 6],
+      [3, 'radio', 'incubation_status', 'Have you joined any incubator / accelerator program earlier?', '', 1, 'Yes; No', 2, 6],
+      [3, 'checkbox', 'services_needed', 'Please select the incubation services that you need:', '', 1, 'Office Space; Mentor Support; Market Access; Lab Equipment & Technical Access; Professional Business Services (IP, Auditing, etc); Fundraising Assistance', 3, 12],
+      [3, 'textarea', 'incubation_duration', 'How long (approx. months) would you like to be incubated?', '', 1, null, 4, 12],
       [3, 'textarea', 'incubation_help', 'Brief on how incubation would help you', '', 1, null, 5, 12],
     ];
     defaultFields.forEach(f => insertField.run(...f));
@@ -148,12 +152,15 @@ const requireAuth = (req, res, next) => {
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 
 // Submit application form
-app.post('/api/apply', upload.single('startup_file'), (req, res) => {
+app.post('/api/apply', upload.fields([
+  { name: 'startup_file', maxCount: 1 },
+  { name: 'financial_proof', maxCount: 1 }
+]), (req, res) => {
   try {
     const {
       applicant_name, startup_name, address, email, whatsapp,
       professional_status, plan_to_grow, financial_support,
-      incubation_support, incubation_duration, association_type,
+      incubation_status, incubation_duration, association_type,
       incubation_help, declaration_agreed
     } = req.body;
 
@@ -161,19 +168,24 @@ app.post('/api/apply', upload.single('startup_file'), (req, res) => {
       ? req.body.services_needed.join(', ')
       : (req.body.services_needed || '');
 
-    const file_path = req.file ? '/uploads/' + req.file.filename : null;
-    const full_data = JSON.stringify(req.body); // Save everything the user submitted dynamically
+    const file_path = req.files && req.files['startup_file'] ? '/uploads/' + req.files['startup_file'][0].filename : null;
+    const financial_proof_path = req.files && req.files['financial_proof'] ? '/uploads/' + req.files['financial_proof'][0].filename : null;
+    
+    // Support either incubation_status or incubation_support depending on form label
+    const incubationVar = req.body.incubation_status || req.body.incubation_support || '';
+    
+    const full_data = JSON.stringify(req.body); 
 
     db.prepare(`
       INSERT INTO applications
       (applicant_name, startup_name, address, email, whatsapp, professional_status,
        plan_to_grow, services_needed, financial_support, incubation_support,
-       incubation_duration, association_type, incubation_help, file_path, declaration_agreed, full_data)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       incubation_duration, association_type, incubation_help, file_path, financial_proof_path, declaration_agreed, full_data)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       applicant_name || 'N/A', startup_name || 'N/A', address || 'N/A', email || 'N/A', whatsapp || 'N/A', professional_status || 'N/A',
-      plan_to_grow, services_needed, financial_support, incubation_support,
-      incubation_duration, association_type, incubation_help, file_path,
+      plan_to_grow, services_needed, financial_support, incubationVar,
+      incubation_duration, association_type, incubation_help, file_path, financial_proof_path,
       declaration_agreed ? 1 : 0, full_data
     );
 
