@@ -8,16 +8,15 @@ const fs = require('fs');
 
 const app = express();
 // CloudPanel-compatible configuration - Reverting to 3103
-const PORT = 3104;
+const PORT = 3105;
 
 // Ensure directories exist
 const uploadDir = path.join(__dirname, 'public', 'uploads');
 const imagesDir = path.join(__dirname, 'public', 'images');
-/* Temporarily commented for debugging permissions
+
 [uploadDir, imagesDir].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-*/
 
 // Multer setup
 const storage = multer.diskStorage({
