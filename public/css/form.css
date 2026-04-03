@@ -428,13 +428,53 @@ h4,
   font-size: 64px;
 }
 
-/* Responsive */
-/* ─── Responsive Optimizations ─── */
-@media (max-width: 1024px) {
+/* Tablet and Intermediate Desktop Optimization (768px to 1280px) */
+@media (min-width: 769px) and (max-width: 1280px) {
   .sidebar-nav {
-    width: 280px;
-    padding: 30px;
+    width: 250px; /* Slimmer sidebar */
+    padding: 30px 20px;
   }
+
+  .sidebar-brand-name { font-size: 20px; }
+  .sidebar-tagline { font-size: 9px; letter-spacing: 0.15em; }
+
+  .content-header {
+    padding: 15px 25px;
+    min-height: 80px;
+  }
+
+  .form-content-wrapper {
+    padding: 25px 30px 0 30px;
+  }
+
+  .step-title {
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+
+  .banner-premium {
+    margin-bottom: 25px;
+    padding: 5px 15px;
+  }
+
+  /* Force fields to stack in this mid-range to prevent cramped 3-column layout */
+  .col-md-3, .col-md-4, .col-md-6, .col-6 {
+    width: 100% !important;
+    margin-bottom: 25px;
+  }
+
+  /* Keep labels bold and all-caps for consistency with smaller range */
+  .premium-field label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #4b5563;
+  }
+
+  .nav-item { gap: 10px; margin-bottom: 20px; }
+  .nav-num { width: 30px; height: 30px; font-size: 12px; }
+  .nav-label { font-size: 13px; }
+  .nav-desc { display: none; } /* Hide desc to save height space on tablets */
 }
 
 @media (max-width: 768px) {
@@ -442,7 +482,6 @@ h4,
   body,
   html {
     overflow: auto;
-    /* Allow natural scrolling on mobile */
   }
 
   .premium-wrapper {
@@ -458,189 +497,212 @@ h4,
   .sidebar-nav {
     width: 100%;
     height: auto;
-    padding: 30px 20px;
+    padding: 40px 20px 0 20px;
     border-right: none;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: none;
     text-align: center;
-    /* Center text for logo area */
+    background: #f8faff;
   }
 
   .brand-section {
-    margin-bottom: 25px !important;
+    margin-bottom: 0px !important;
   }
 
   .brand-section .d-flex {
     flex-direction: column !important;
     align-items: center !important;
-    gap: 15px !important;
+    gap: 10px !important;
   }
 
   .sb-brand-area {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 2px;
+  }
+
+  .brand-logo {
+    width: 90px;
+    height: 90px;
+    margin-bottom: 5px;
   }
 
   .sidebar-brand-name {
-    font-size: 22px;
+    font-size: 24px;
+    font-weight: 800;
+    color: #751421;
+    margin-bottom: 0 !important;
   }
 
   .sidebar-tagline {
-    letter-spacing: 0.1em;
-    margin-top: 5px;
+    letter-spacing: 0.15em;
+    font-size: 11px;
+    color: #475569;
+    font-weight: 600;
   }
 
   .step-navigation {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-    overflow-x: auto;
-    padding-bottom: 10px;
-    scrollbar-width: none;
-    justify-content: flex-start;
+    display: none !important;
   }
 
-  .step-navigation::-webkit-scrollbar {
-    display: none;
+  .sidebar-footer {
+    display: none !important;
   }
 
-  .nav-item {
-    margin-bottom: 0;
-    flex-shrink: 0;
-    padding: 8px 16px;
-    background: white;
-    border: 1px solid #f1f5f9;
-    border-radius: 20px;
+  .content-area {
+    background: #f8faff;
   }
 
-  .nav-item.active {
-    background: #fdf2f4;
-    border-color: var(--mcc-maroon);
-  }
-
-  .nav-num {
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
-  }
-
-  .nav-label {
-    font-size: 13px;
-  }
-
-  .nav-desc {
-    display: none;
-  }
-
-  /* Content area adjustments */
   .content-header {
     height: auto;
-    padding: 15px 20px;
+    padding: 20px 20px 30px 20px;
     justify-content: center !important;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: white;
-    border-bottom: 1px solid #f1f5f9;
+    align-items: center;
+    background: #f8faff;
+    border-bottom: none;
+    text-align: center;
+    flex-direction: column-reverse;
   }
 
   .progress-container {
     width: 100%;
-    justify-content: center;
+    max-width: 340px;
+    justify-content: space-between;
+    background: transparent;
+    padding: 0;
+    margin-top: 40px;
+    order: 1;
+    /* Move progress above title */
   }
 
-  .form-content-wrapper {
-    padding: 20px;
-    margin-top: 0;
+  .step-header.banner-premium {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    border: none;
+    order: 2;
+    /* Title below progress */
   }
 
   .step-title {
     font-size: 24px;
-    text-align: center;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0px 0 10px 0;
+    line-height: 1.2;
+    max-width: 320px;
   }
 
   .step-subtitle {
-    text-align: center;
-  }
-
-  .banner-premium {
-    margin-bottom: 30px;
-    padding: 15px;
-    border-left: none;
-    border-top: 4px solid var(--mcc-maroon);
-    text-align: center;
-  }
-
-  /* Buttons and Actions */
-  .navigation-bar-premium {
-    flex-direction: column !important;
-    gap: 12px;
-    padding: 25px 20px !important;
-    position: sticky;
-    bottom: 0;
-    background: white;
-    z-index: 100;
-    box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.05);
-  }
-
-  .navigation-bar-premium .ms-auto {
-    margin-left: 0 !important;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px !important;
-    order: 1;
-    /* Continue / Submit area first */
-  }
-
-  #prevBtn {
-    order: 2;
-    /* Previous button second */
-    display: flex !important;
-    /* Force flex for centering */
-    width: 100% !important;
-  }
-
-  #prevBtn.d-none {
-    display: none !important;
-  }
-
-  .btn-premium-maroon,
-  .btn-premium-secondary {
-    width: 100%;
-    padding: 16px !important;
-    font-size: 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 12px;
-  }
-
-  #nextBtn,
-  #submitBtn {
-    order: 1;
-  }
-
-  #clearBtn {
-    order: 3;
-    width: 100%;
-    text-align: center;
-    padding: 12px;
     font-size: 14px;
-    color: #94a3b8 !important;
+    color: #64748b;
+    margin-bottom: 20px;
+    max-width: 320px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .progress-bar-wrap {
+    flex-grow: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    margin-right: 15px;
+  }
+
+  .progress-bar-fill {
+    background: #10b981;
+  }
+
+  .progress-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  .form-container-scroll {
+    background: white;
+
+  }
+
+  .form-content-wrapper {
+    padding: 40px 25px;
+  }
+
+  /* Mobile Label Overrides */
+  .premium-field label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4b5563;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   /* Force stack fields on mobile */
+  .col-md-3,
+  .col-md-4,
   .col-md-6,
-  .col-6 {
+  .col-md-8,
+  .col-6,
+  .col-12 {
     width: 100% !important;
+    margin-bottom: 25px;
+  }
+
+  .navigation-bar-premium {
+    flex-direction: column !important;
+    gap: 0;
+    padding: 20px 25px 40px 25px !important;
+    background: white;
+    border: none;
+  }
+
+  .navigation-bar-premium .ms-auto {
+    margin: 0 !important;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .btn-premium-maroon {
+    width: 100%;
+    max-width: 340px;
+    background: #751421;
+    padding: 16px !important;
+    font-size: 16px;
+    height: 56px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+  }
+
+  #prevBtn {
+    width: 100%;
+    max-width: 340px;
+    margin-bottom: 15px;
+    height: 56px;
+  }
+
+  #clearBtn {
+    width: auto;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    color: #94a3b8 !important;
+    text-decoration: none;
+    font-weight: 500;
+    display: block !important;
   }
 }
 
 @media (max-width: 480px) {
   .sidebar-brand-name {
-    font-size: 20px;
+    font-size: 22px;
+  }
+
+  .step-title {
+    font-size: 22px;
   }
 }
 
@@ -685,6 +747,7 @@ h4,
 .financial-proof-zone .required-star {
   font-size: 14px;
 }
+
 .text-maroon {
   color: #751421 !important;
 }
@@ -720,4 +783,3 @@ h4,
   font-weight: 500;
   opacity: 0.8;
 }
-
