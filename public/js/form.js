@@ -122,7 +122,7 @@ function renderField(f) {
           <div class="icon-circle mb-3 mx-auto shadow-sm" style="width: 45px; height: 45px; background: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #eee;">
             <i class="fas fa-file-upload text-maroon opacity-75"></i>
           </div>
-          <p class="mb-1 fw-bold small text-uppercase opacity-75">${labelUpper.includes('PITCH DECK') ? 'Upload Pitch Deck' : 'Upload Document'}</p>
+          <p class="mb-1 fw-bold small text-uppercase opacity-75">${f.label.toUpperCase().includes('PITCH DECK') ? 'Upload Pitch Deck' : f.label.toUpperCase()}</p>
           <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Choose File</button>
         </div>
         <input type="file" name="${f.field_name}" id="${f.field_name}" class="d-none" ${reqAttr} 
@@ -206,9 +206,7 @@ function renderField(f) {
     }
   }
 
-  const labelHtml = f.field_type === 'file' 
-    ? '' 
-    : `<label class="form-label small fw-bold opacity-75 text-uppercase tracking-wider" for="${f.field_name}">
+  const labelHtml = `<label class="form-label small fw-bold opacity-75 text-uppercase tracking-wider" for="${f.field_name}">
         ${f.label} ${star}
       </label>`;
 
