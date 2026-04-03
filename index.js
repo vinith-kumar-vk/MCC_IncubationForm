@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const app = express();
 // CloudPanel-compatible configuration
-const PORT = process.env.PORT || 3104;
+const PORT = process.env.PORT || 4500;
 
 // Ensure directories exist
 const uploadDir = path.join(__dirname, 'public', 'uploads');
