@@ -168,7 +168,7 @@ app.post('/api/apply', upload.any(), (req, res) => {
       ? req.body.services_needed.join(', ')
       : (req.body.services_needed || '');
 
-    // Collect all uploaded file paths
+    // Collect all uploaded file paths and associated URLs
     const fileData = {};
     if (req.files) {
       req.files.forEach(f => {
@@ -176,11 +176,19 @@ app.post('/api/apply', upload.any(), (req, res) => {
       });
     }
 
+    // Capture dynamic URL fields (e.g. startup_file_url)
+    Object.keys(req.body).forEach(key => {
+      if (key.endsWith('_url')) {
+        fileData[key] = req.body[key];
+      }
+    });
+
     const file_path = fileData['startup_file'] || null;
+    const pitch_deck_url = fileData['startup_file_url'] || req.body.pitch_deck_url || null;
     const financial_proof_path = fileData['financial_proof'] || null;
     
-    // Merge file paths into full_data
-    const full_data = JSON.stringify({ ...req.body, ...fileData }); 
+    // Merge file paths and URLs into full_data
+    const full_data = JSON.stringify({ ...req.body, ...fileData, pitch_deck_url }); 
 
     // Support either incubation_status or incubation_support depending on form label
     const incubationVar = req.body.incubation_status || req.body.incubation_support || '';
@@ -189,12 +197,12 @@ app.post('/api/apply', upload.any(), (req, res) => {
       INSERT INTO applications
       (applicant_name, startup_name, address, email, whatsapp, professional_status,
        plan_to_grow, services_needed, financial_support, incubation_support,
-       incubation_duration, association_type, incubation_help, file_path, financial_proof_path, declaration_agreed, full_data)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       incubation_duration, association_type, incubation_help, file_path, financial_proof_path, pitch_deck_url, declaration_agreed, full_data)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       applicant_name || 'N/A', startup_name || 'N/A', address || 'N/A', email || 'N/A', whatsapp || 'N/A', professional_status || 'N/A',
       final_idea_description, services_needed || null, financial_support || null, incubationVar || null,
-      incubation_duration || null, association_type || null, incubation_help || null, file_path, financial_proof_path,
+      incubation_duration || null, association_type || null, incubation_help || null, file_path, financial_proof_path, pitch_deck_url,
       declaration_agreed ? 1 : 0, full_data
     );
 
@@ -308,38 +316,49 @@ app.delete('/api/applications/:id', requireAuth, (req, res) => {
 
 // ─── CMS: SITE SETTINGS ──────────────────────────────────────────────────────
 
-// Check if verification is needed for rules
+// Advanced Migration & Sync Logic
 try {
-  // Enforce 100 word limit for any field containing "Idea" or "startup" in description
-  const fieldsToUpdate = db.prepare("SELECT field_name FROM form_fields WHERE label LIKE '%Idea%' OR label LIKE '%Startup%'").all();
-  const updateRule = db.prepare("UPDATE form_fields SET validation_rules = ? WHERE field_name = ?");
-  fieldsToUpdate.forEach(f => {
-    updateRule.run(JSON.stringify({ max_words: 100 }), f.field_name);
+  // Ensure pitch_deck_url column exists in applications
+  try { db.prepare("ALTER TABLE applications ADD COLUMN pitch_deck_url TEXT").run(); } catch(e){}
+
+  // Sync Validation Rules from current requirements across all form fields
+  const fields = db.prepare("SELECT id, label, field_name FROM form_fields").all();
+  fields.forEach(f => {
+    let rules = {};
+    const label = (f.label || "").toUpperCase();
+    const name = (f.field_name || "").toLowerCase();
+    
+    // 100 word limit for Idea/Description/Startup Name (as requested)
+    if (label.includes("IDEA") || label.includes("DESCRIPTION") || label.includes("STARTUP NAME")) {
+      rules.max_words = 100;
+    }
+    
+    // Pitch Deck special handling: Max size 10MB + Allow URL toggle
+    if (label.includes("PITCH DECK")) {
+      rules.max_size_mb = 10;
+      rules.allow_url = true;
+      rules.allowed_ext = 'pdf';
+    }
+
+    if (Object.keys(rules).length > 0) {
+      db.prepare("UPDATE form_fields SET validation_rules = ? WHERE id = ?").run(JSON.stringify(rules), f.id);
+    } else {
+      // Clear rules for others or set defaults (Certification remains normal)
+      db.prepare("UPDATE form_fields SET validation_rules = NULL WHERE id = ?").run(f.id);
+    }
   });
-  console.log('--- RULES APPLIED TO DYNAMIC FIELDS ---');
-} catch (e) { console.error('Migration error:', e); }
 
-// Add column_width if it doesn't exist (Simple Migration)
-try {
-  db.prepare('ALTER TABLE form_fields ADD COLUMN column_width INTEGER DEFAULT 12').run();
-  console.log('Database migrated: added column_width');
-} catch (e) { /* already exists */ }
+  // Ensure 'startup_name' is required
+  db.prepare("UPDATE form_fields SET required = 1 WHERE field_name = 'startup_name'").run();
 
-try {
-  db.prepare("UPDATE form_fields SET validation_rules = ? WHERE field_name = ?").run(
-    JSON.stringify({ max_words: 100 }), 
-    'idea_description'
-  );
-  db.prepare("UPDATE form_fields SET required = 1 WHERE field_name = ?").run('startup_name');
-  console.log('--- VALIDATION RULES UPDATED ---');
-} catch (e) {
-  console.warn('Migration note:', e.message);
+  console.log("--- DATABASE DYNAMIC VALIDATIONS SYNCED ---");
+} catch (err) {
+  console.error("Migration error:", err);
 }
 
 try {
   db.prepare('ALTER TABLE applications ADD COLUMN full_data TEXT').run();
-  console.log('Database migrated: added full_data');
-} catch (e) { /* already exists */ }
+} catch (e) { /* exists */ }
 
 // Get all settings (public — used by form page)
 app.get('/api/settings', (req, res) => {

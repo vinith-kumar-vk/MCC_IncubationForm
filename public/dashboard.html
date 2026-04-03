@@ -383,8 +383,26 @@
         <input type="number" id="fld_limit_words" class="cms-input" placeholder="e.g. 100">
       </div>
       <div id="row_validation_file" class="cms-field" style="display:none;">
-        <label>Max File Size (MB) (Limit for uploads)</label>
-        <input type="number" id="fld_limit_size" class="cms-input" placeholder="e.g. 10">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label>Max File Size (MB)</label>
+              <input type="number" id="fld_limit_size" class="cms-input" placeholder="e.g. 10">
+            </div>
+            <div style="flex:1;">
+              <label>Allowed Ext (e.g. pdf,jpg)</label>
+              <input type="text" id="fld_allowed_ext" class="cms-input" placeholder="pdf">
+            </div>
+          </div>
+          <div>
+            <label>Custom Hint (e.g. 3-5 slides)</label>
+            <input type="text" id="fld_custom_hint" class="cms-input" placeholder="Leave empty for none">
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="fld_allow_url" style="width:16px; height:16px;">
+            <label for="fld_allow_url" style="margin:0; font-weight:500;">Allow Website Link (e.g. for Pitch Decks)?</label>
+          </div>
+        </div>
       </div>
       <div class="cms-field">
         <label>Placeholder (hint in input)</label>

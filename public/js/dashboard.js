@@ -384,6 +384,9 @@ function openFieldModal(id) {
     let rules = {}; try { rules = JSON.parse(f.validation_rules || '{}'); } catch(e){}
     document.getElementById('fld_limit_words').value = rules.max_words || '';
     document.getElementById('fld_limit_size').value = rules.max_size_mb || '';
+    document.getElementById('fld_allowed_ext').value = rules.allowed_ext || 'pdf';
+    document.getElementById('fld_custom_hint').value = rules.custom_hint || '';
+    document.getElementById('fld_allow_url').checked = !!rules.allow_url;
 
     document.getElementById('row_field_name').style.display = 'none'; // can't change name of existing
     toggleOptionsRow();
@@ -430,14 +433,16 @@ async function saveField() {
 
   // Build validation rules JSON
   const rules = {};
-  if (payload.field_type === 'textarea' || payload.field_type === 'text') {
+  if (['text','textarea','email','url'].includes(payload.field_type)) {
     const mw = parseInt(document.getElementById('fld_limit_words').value);
     if (mw) rules.max_words = mw;
   }
   if (payload.field_type === 'file') {
     const ms = parseInt(document.getElementById('fld_limit_size').value);
     if (ms) rules.max_size_mb = ms;
-    rules.allowed_ext = 'pdf'; // defaulting to PDF based on user request
+    rules.allowed_ext = document.getElementById('fld_allowed_ext').value.trim() || 'pdf';
+    rules.custom_hint = document.getElementById('fld_custom_hint').value.trim();
+    rules.allow_url = document.getElementById('fld_allow_url').checked;
   }
   payload.validation_rules = Object.keys(rules).length > 0 ? JSON.stringify(rules) : null;
 

@@ -89,19 +89,37 @@ function renderField(f) {
       ${opts}
     </select>`;
   } else if (f.field_type === 'file') {
+    let rules = {}; try { rules = JSON.parse(f.validation_rules || '{}'); } catch(e){}
+    const allowUrl = !!rules.allow_url;
+    const maxSize = rules.max_size_mb || 5;
+    const customHint = rules.custom_hint || '';
+    const labelUpper = (f.label || "").toUpperCase();
+    const restrictionText = `Allowed: ${rules.allowed_ext || 'PDF'} ${allowUrl ? 'or Website Link' : ''}, Max: ${maxSize}MB ${customHint ? '('+customHint+')' : ''}`;
+    
     inputHtml = `
       <div class="file-premium-zone mt-2" onclick="document.getElementById('${f.field_name}').click()">
         <div class="p-4 border rounded-4 text-center transition-all bg-light hover-shadow-sm" style="transition: 1s;">
           <div class="icon-circle mb-3 mx-auto shadow-sm" style="width: 45px; height: 45px; background: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #eee;">
             <i class="fas fa-file-upload text-maroon opacity-75"></i>
           </div>
-          <p class="mb-1 fw-bold small text-uppercase opacity-75">Upload Document</p>
+          <p class="mb-1 fw-bold small text-uppercase opacity-75">${labelUpper.includes('PITCH DECK') ? 'Upload Pitch Deck' : 'Upload Document'}</p>
           <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Choose File</button>
         </div>
         <input type="file" name="${f.field_name}" id="${f.field_name}" class="d-none" ${reqAttr} 
-          onchange="document.getElementById('${f.field_name}_filename').textContent = this.files[0]?.name || '${f.placeholder || 'No file chosen'}'" />
+          onchange="handleFileSelection('${f.field_name}', this)" />
         <div id="${f.field_name}_filename" class="text-center mt-2 small fw-bold text-maroon">${f.placeholder || 'No file chosen'}</div>
+        <div class="text-center text-muted mt-1" style="font-size: 11px;">${restrictionText}</div>
       </div>`;
+
+    if (allowUrl) {
+      inputHtml += `
+        <div class="mt-3 text-center separator-text"><span class="bg-white px-2 small text-muted">OR</span></div>
+        <div class="mt-2 text-start">
+          <label class="form-label small fw-bold opacity-75">Provide URL (e.g. Google Drive, Canva)</label>
+          <input type="url" name="${f.field_name}_url" id="${f.field_name}_url" class="form-control premium-input shadow-none" placeholder="https://..." oninput="handleUrlInput('${f.field_name}')" />
+        </div>
+      `;
+    }
   } else if (f.field_type === 'radio' || f.field_type === 'checkbox') {
     const opts = (f.options || '').split(';').map(o => o.trim());
     const inputType = f.field_type;
@@ -335,8 +353,8 @@ function initFormLogic() {
         if (f.validation_rules) {
           try {
             const rules = JSON.parse(f.validation_rules);
-            // Textarea Word Count
-            if (f.field_type === 'textarea' && rules.max_words) {
+            // Word Count for text and textarea
+            if (['text', 'textarea'].includes(f.field_type) && rules.max_words) {
               const textValue = val.trim();
               const words = textValue === "" ? 0 : textValue.split(/\s+/).length;
               if (words > rules.max_words) {
@@ -351,16 +369,36 @@ function initFormLogic() {
               showError(`err_${f.field_name}`, 'Please enter a valid startup name');
               el.classList.add('error');
             }
-            // File Validation
-            if (f.field_type === 'file' && el.files[0]) {
-              const file = el.files[0];
-              if (rules.allowed_ext === 'pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-                isValid = false; showError(`err_${f.field_name}`, 'Only PDF files are allowed');
-                el.parentElement.classList.add('error');
+            // File/URL Validation
+            if (f.field_type === 'file') {
+              const fileInp = el;
+              const urlInp = id(`${f.field_name}_url`);
+              const file = fileInp.files[0];
+              const urlVal = urlInp ? urlInp.value.trim() : '';
+
+              // If required, check if at least one is provided
+              if (f.required && !file && !urlVal) {
+                isValid = false;
+                showError(`err_${f.field_name}`, `Please upload a file ${rules.allow_url ? 'or provide a link' : ''}`);
+                fileInp.parentElement.classList.add('error');
               }
-              if (rules.max_size_mb && file.size > rules.max_size_mb * 1024 * 1024) {
-                isValid = false; showError(`err_${f.field_name}`, `File size must be less than ${rules.max_size_mb}MB`);
-                el.parentElement.classList.add('error');
+
+              // Check file size if file exists
+              if (file && rules.max_size_mb && file.size > rules.max_size_mb * 1024 * 1024) {
+                isValid = false;
+                showError(`err_${f.field_name}`, `File size must be less than ${rules.max_size_mb}MB`);
+                fileInp.parentElement.classList.add('error');
+              }
+
+              // Check file extension
+              const allowed = (rules.allowed_ext || 'pdf').toLowerCase().split(',').map(x => x.trim());
+              if (file) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!allowed.includes(ext)) {
+                  isValid = false;
+                  showError(`err_${f.field_name}`, `Only ${allowed.join(', ')} files are allowed`);
+                  fileInp.parentElement.classList.add('error');
+                }
               }
             }
           } catch(e){}
@@ -453,5 +491,46 @@ function updateWordCount(fieldName, maxWords) {
     counter.classList.add('text-danger', 'fw-bold');
   } else {
     counter.classList.remove('text-danger', 'fw-bold');
+  }
+}
+
+function handleFileSelection(fieldName, input) {
+  const file = input.files[0];
+  const filenameDisplay = id(`${fieldName}_filename`);
+  const urlInput = id(`${fieldName}_url`);
+  
+  if (!file) return;
+
+  // Get dynamic max size if possible, default to 5
+  const fieldConfig = dynamicFieldsConfig.find(f => f.field_name === fieldName);
+  let rules = {}; try { rules = JSON.parse(fieldConfig.validation_rules || '{}'); } catch(e){}
+  const maxSizeMB = rules.max_size_mb || 5;
+  const maxSize = maxSizeMB * 1024 * 1024;
+  
+  if (file.size > maxSize) {
+    alert(`File is too large. Max allowed size is ${maxSizeMB}MB.`);
+    input.value = '';
+    if (filenameDisplay) filenameDisplay.textContent = 'No file chosen';
+    return;
+  }
+
+  if (filenameDisplay) filenameDisplay.textContent = file.name;
+  
+  // If user selects a file, clear the URL input
+  if (urlInput) {
+    urlInput.value = '';
+    urlInput.classList.remove('is-invalid');
+  }
+}
+
+function handleUrlInput(fieldName) {
+  const urlInput = id(`${fieldName}_url`);
+  const fileInput = id(fieldName);
+  const filenameDisplay = id(`${fieldName}_filename`);
+  
+  if (urlInput && urlInput.value.trim() !== '') {
+    // If user types a URL, clear the file input
+    if (fileInput) fileInput.value = '';
+    if (filenameDisplay) filenameDisplay.textContent = 'URL provided';
   }
 }
