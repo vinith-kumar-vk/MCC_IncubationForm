@@ -70,7 +70,18 @@ function renderField(f) {
   if (['text', 'email', 'tel', 'number', 'date', 'url'].includes(f.field_type)) {
     inputHtml = `<input type="${f.field_type}" class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" placeholder="${f.placeholder || ''}" ${reqAttr} />`;
   } else if (f.field_type === 'textarea') {
-    inputHtml = `<textarea class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" rows="2" placeholder="${f.placeholder || ''}" ${reqAttr}></textarea>`;
+    let counterHtml = '';
+    let rules = {};
+    if (f.validation_rules) {
+      try { rules = JSON.parse(f.validation_rules); } catch(e){}
+    }
+    if (rules.max_words) {
+      counterHtml = `<div id="counter_${f.field_name}" class="mt-1 small opacity-75 text-end">0 / ${rules.max_words} words</div>`;
+    }
+    inputHtml = `
+      <textarea class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" rows="3" placeholder="${f.placeholder || ''}" ${reqAttr} oninput="updateWordCount('${f.field_name}', ${rules.max_words || 0})"></textarea>
+      ${counterHtml}
+    `;
   } else if (f.field_type === 'select') {
     const opts = (f.options || '').split(',').map(o => `<option value="${o.trim()}">${o.trim()}</option>`).join('');
     inputHtml = `<select class="form-control premium-input form-select" name="${f.field_name}" id="${f.field_name}" ${reqAttr}>
@@ -418,3 +429,22 @@ function initFormLogic() {
 
 function closeModal() { id('successModal').classList.remove('active'); window.location.reload(); }
 
+
+function updateWordCount(fieldName, maxWords) {
+  if (!maxWords) return;
+  const el = id(fieldName);
+  const counter = id(`counter_${fieldName}`);
+  if (!el || !counter) return;
+  
+  const text = el.value.trim();
+  const words = text === "" ? 0 : text.split(/\s+/).length;
+  counter.innerText = `${words} / ${maxWords} words`;
+  
+  if (words > maxWords) {
+    counter.classList.add('text-danger', 'fw-bold');
+    el.classList.add('is-invalid');
+  } else {
+    counter.classList.remove('text-danger', 'fw-bold');
+    el.classList.remove('is-invalid');
+  }
+}

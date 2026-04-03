@@ -200,8 +200,12 @@ app.post('/api/apply', upload.any(), (req, res) => {
 
     res.json({ success: true, message: 'Application submitted successfully!' });
   } catch (err) {
-    console.error('SUBMIT ERROR:', err);
-    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+    console.error('CRITICAL SUBMIT ERROR:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Submission failed: ' + err.message,
+      stack: err.stack
+    });
   }
 });
 
@@ -303,6 +307,17 @@ app.delete('/api/applications/:id', requireAuth, (req, res) => {
 // Reorder fields logic is consolidated below.
 
 // ─── CMS: SITE SETTINGS ──────────────────────────────────────────────────────
+
+// Check if verification is needed for rules
+try {
+  // Enforce 100 word limit for any field containing "Idea" or "startup" in description
+  const fieldsToUpdate = db.prepare("SELECT field_name FROM form_fields WHERE label LIKE '%Idea%' OR label LIKE '%Startup%'").all();
+  const updateRule = db.prepare("UPDATE form_fields SET validation_rules = ? WHERE field_name = ?");
+  fieldsToUpdate.forEach(f => {
+    updateRule.run(JSON.stringify({ max_words: 100 }), f.field_name);
+  });
+  console.log('--- RULES APPLIED TO DYNAMIC FIELDS ---');
+} catch (e) { console.error('Migration error:', e); }
 
 // Add column_width if it doesn't exist (Simple Migration)
 try {
