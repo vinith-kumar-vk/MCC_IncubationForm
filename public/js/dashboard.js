@@ -358,7 +358,7 @@ function openFieldModal(id) {
     document.getElementById('fld_label').value = '';
     document.getElementById('fld_placeholder').value = '';
     document.getElementById('fld_options').value = '';
-    document.getElementById('fld_width').value = '12';
+    document.getElementById('fld_col_width').value = '12';
     document.getElementById('fld_required').checked = true;
     document.getElementById('fld_active').checked = true;
     document.getElementById('row_field_name').style.display = '';
@@ -376,7 +376,7 @@ function openFieldModal(id) {
     document.getElementById('fld_placeholder').value = f.placeholder || '';
     document.getElementById('fld_options').value = f.options || '';
     document.getElementById('fld_order').value = f.sort_order;
-    document.getElementById('fld_width').value = f.column_width || '12';
+    document.getElementById('fld_col_width').value = f.column_width || '12';
     document.getElementById('fld_required').checked = !!f.required;
     document.getElementById('fld_active').checked = !!f.is_active;
     
@@ -427,7 +427,7 @@ async function saveField() {
     placeholder: document.getElementById('fld_placeholder').value.trim(),
     options: document.getElementById('fld_options').value.trim() || null,
     sort_order: parseInt(document.getElementById('fld_order').value) || 0,
-    column_width: parseInt(document.getElementById('fld_width').value) || 12,
+    column_width: parseInt(document.getElementById('fld_col_width').value) || 12,
     required: document.getElementById('fld_required').checked ? 1 : 0,
     is_active: document.getElementById('fld_active').checked ? 1 : 0,
   };

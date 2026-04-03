@@ -53,10 +53,6 @@ async function loadDynamicFields() {
 
       let html = stepsGroup[s].map(f => renderField(f)).join('');
 
-
-      // Step 3 services - special fixed field
-      // Step 3 services - removed to avoid duplication with dynamic form builder
-
       container.innerHTML = html;
     }
   } catch (e) { console.error('Dynamic fields load error', e); }
@@ -65,6 +61,21 @@ async function loadDynamicFields() {
 function renderField(f) {
   const reqAttr = f.required ? 'required' : '';
   const star = f.required ? '<span class="required-star">*</span>' : '';
+
+  // Robustly handle column width (numeric or string)
+  let colClass = 'col-12';
+  if (f.column_width) {
+    if (typeof f.column_width === 'number') {
+      colClass = (f.column_width === 12) ? 'col-12' : `col-md-${f.column_width}`;
+    } else {
+      // If it's already a full class like 'col-md-6' or just a number as a string '6'
+      colClass = f.column_width.startsWith('col') ? f.column_width : `col-md-${f.column_width}`;
+    }
+  } else {
+    // Default smart layout
+    colClass = (['textarea', 'radio', 'checkbox', 'file'].includes(f.field_type) ? 'col-12' : 'col-md-6');
+  }
+  
   let inputHtml = '';
 
   if (['text', 'email', 'tel', 'number', 'date', 'url'].includes(f.field_type)) {
@@ -134,7 +145,6 @@ function renderField(f) {
     const inputType = f.field_type;
     const itemsHtml = opts.map((opt, i) => {
       const fieldId = `${f.field_name}_${i}`;
-      // Special handlers for conditional fields
       let onchangeAttr = '';
       const lowLabel = (f.label || '').toLowerCase();
       const lowName = (f.field_name || '').toLowerCase();
@@ -144,7 +154,6 @@ function renderField(f) {
         onchangeAttr = `onchange="toggleIncubationSupport(this.value)"`;
       }
 
-      // Consistent 3-column layout for services as requested
       let itemColClass = 'col-md-4';
       if (lowName.includes('services') || lowLabel.includes('services')) {
         itemColClass = 'col-md-4';
@@ -167,7 +176,6 @@ function renderField(f) {
     const lowLabel = (f.label || '').toLowerCase();
     const lowName = (f.field_name || '').toLowerCase();
 
-    // If it's financial support, append the hidden proof upload field
     if (lowName.includes('financial') || lowLabel.includes('financial support')) {
       inputHtml += `
         <div id="financialProofSection" class="mt-4 financial-proof-zone mb-2" style="display:none;">
@@ -187,7 +195,6 @@ function renderField(f) {
       `;
     }
 
-    // If it's incubation status, append the incubator name field
     if (lowName.includes('incubation') || lowLabel.includes('incubator') || lowLabel.includes('accelerator')) {
       inputHtml += `
         <div id="incubationDetailsSection" class="mt-4 financial-proof-zone mb-2" style="display:none;">
@@ -199,36 +206,24 @@ function renderField(f) {
     }
   }
 
-  const colWidth = f.column_width || (['textarea', 'radio', 'checkbox'].includes(f.field_type) ? 12 : 6);
-  const colClass = `col-md-${colWidth}`;
-
-  const labelTag = f.field_type === 'file'
-    ? `<label class="mb-2 fw-bold text-uppercase opacity-75 small">${f.label} ${star}</label>`
-    : `<label for="${f.field_name}">${f.label} ${star}</label>`;
-
-  let hintHtml = '';
-  if (f.validation_rules) {
-    try {
-      const rules = JSON.parse(f.validation_rules);
-      if (rules.max_words) hintHtml = `<div class="rule-hint">Word limit: ${rules.max_words} words</div>`;
-      if (rules.max_size_mb) hintHtml = `<div class="rule-hint">Allowed: ${rules.allowed_ext || 'files'}, Max: ${rules.max_size_mb}MB</div>`;
-    } catch(e){}
-  }
+  const labelHtml = f.field_type === 'file' 
+    ? '' 
+    : `<label class="form-label small fw-bold opacity-75 text-uppercase tracking-wider" for="${f.field_name}">
+        ${f.label} ${star}
+      </label>`;
 
   return `
     <div class="${colClass} mb-3">
       <div class="premium-field">
-        ${labelTag}
+        ${labelHtml}
         ${inputHtml}
-        ${hintHtml}
         <div class="error-msg" id="err_${f.field_name}"></div>
       </div>
-    </div>`;
+    </div>
+  `;
 }
 
 function toggleFinancialProof(val) {
-  // Logic handled by the general toggle conditional function if needed, 
-  // but for simplicity we keep these specific ones for the requested fields.
   const section = document.getElementById('financialProofSection');
   if (section) section.style.display = val.toLowerCase() === 'yes' ? 'block' : 'none';
 }
@@ -288,7 +283,6 @@ function initFormLogic() {
 
   nextBtn.addEventListener('click', () => { if (validateStep(currentStep)) { currentStep++; updateStep(); } });
   prevBtn.addEventListener('click', () => { if (currentStep > 1) { currentStep--; updateStep(); } });
-
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -443,7 +437,6 @@ function initFormLogic() {
             }
           }
 
-          // Always validate "Services" field if label contains 'services'
           if (lowLabel.includes('services') && f.field_type === 'checkbox') {
             if (!document.querySelector(`input[name="${f.field_name}"]:checked`)) {
               isValid = false;
@@ -453,7 +446,6 @@ function initFormLogic() {
         });
       }
     } else {
-      // Step 4: Final Confirmation checks
       const d1 = id('decl1')?.checked;
       const d2 = id('decl2')?.checked;
       const d3 = id('decl3')?.checked;
@@ -475,7 +467,6 @@ function initFormLogic() {
 }
 
 function closeModal() { id('successModal').classList.remove('active'); window.location.reload(); }
-
 
 function handleFileSelection(fieldName, input) {
   const file = input.files[0];
@@ -532,3 +523,5 @@ function updateWordCount(fieldName, maxWords) {
   if (wordsCount >= maxWords) counter.classList.add('text-danger', 'fw-bold');
   else counter.classList.remove('text-danger', 'fw-bold');
 }
+
+function id(name) { return document.getElementById(name); }

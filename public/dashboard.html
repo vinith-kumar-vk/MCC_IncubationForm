@@ -375,8 +375,22 @@
         <input type="text" id="fld_name" class="cms-input" placeholder="e.g. applicant_name">
       </div>
       <div class="cms-field">
-        <label>Label (shown to user)</label>
-        <input type="text" id="fld_label" class="cms-input" placeholder="e.g. Full Name of Applicant">
+        <div style="display:flex; gap:10px;">
+          <div style="flex:2;">
+            <label>Label (shown to user)</label>
+            <input type="text" id="fld_label" class="cms-input" placeholder="e.g. Full Name of Applicant">
+          </div>
+          <div style="flex:1;">
+            <label>Layout Width</label>
+            <select id="fld_col_width" class="cms-input">
+              <option value="12">Full Width (100%)</option>
+              <option value="6">Half Width (50%)</option>
+              <option value="4">One-Third (33%)</option>
+              <option value="3">One-Fourth (25%)</option>
+              <option value="8">Two-Thirds (66%)</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div id="row_validation_textarea" class="cms-field" style="display:none;">
         <label>Max Words (Limit for descriptions)</label>
