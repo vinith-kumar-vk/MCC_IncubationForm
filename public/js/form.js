@@ -436,15 +436,22 @@ function updateWordCount(fieldName, maxWords) {
   const counter = id(`counter_${fieldName}`);
   if (!el || !counter) return;
   
-  const text = el.value.trim();
-  const words = text === "" ? 0 : text.split(/\s+/).length;
-  counter.innerText = `${words} / ${maxWords} words`;
+  let text = el.value.trim();
+  let wordsArray = text === "" ? [] : text.split(/\s+/);
+  let wordsCount = wordsArray.length;
   
-  if (words > maxWords) {
+  if (wordsCount > maxWords) {
+    // Strictly truncate to maxWords
+    const truncatedText = wordsArray.slice(0, maxWords).join(' ');
+    el.value = truncatedText;
+    wordsCount = maxWords;
+  }
+  
+  counter.innerText = `${wordsCount} / ${maxWords} words`;
+  
+  if (wordsCount >= maxWords) {
     counter.classList.add('text-danger', 'fw-bold');
-    el.classList.add('is-invalid');
   } else {
     counter.classList.remove('text-danger', 'fw-bold');
-    el.classList.remove('is-invalid');
   }
 }
