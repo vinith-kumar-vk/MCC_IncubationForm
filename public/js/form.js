@@ -326,12 +326,19 @@ function initFormLogic() {
             const rules = JSON.parse(f.validation_rules);
             // Textarea Word Count
             if (f.field_type === 'textarea' && rules.max_words) {
-              const words = val.trim().split(/\s+/).filter(w => w.length > 0).length;
+              const textValue = val.trim();
+              const words = textValue === "" ? 0 : textValue.split(/\s+/).length;
               if (words > rules.max_words) {
                 isValid = false;
                 showError(`err_${f.field_name}`, `Please limit to ${rules.max_words} words (Current: ${words})`);
                 el.classList.add('error');
               }
+            }
+            // Startup Name specific validation
+            if (f.field_name === 'startup_name' && val.length < 2) {
+              isValid = false;
+              showError(`err_${f.field_name}`, 'Please enter a valid startup name');
+              el.classList.add('error');
             }
             // File Validation
             if (f.field_type === 'file' && el.files[0]) {

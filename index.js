@@ -311,6 +311,17 @@ try {
 } catch (e) { /* already exists */ }
 
 try {
+  db.prepare("UPDATE form_fields SET validation_rules = ? WHERE field_name = ?").run(
+    JSON.stringify({ max_words: 100 }), 
+    'idea_description'
+  );
+  db.prepare("UPDATE form_fields SET required = 1 WHERE field_name = ?").run('startup_name');
+  console.log('--- VALIDATION RULES UPDATED ---');
+} catch (e) {
+  console.warn('Migration note:', e.message);
+}
+
+try {
   db.prepare('ALTER TABLE applications ADD COLUMN full_data TEXT').run();
   console.log('Database migrated: added full_data');
 } catch (e) { /* already exists */ }
