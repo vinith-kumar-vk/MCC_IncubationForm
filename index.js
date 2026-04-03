@@ -82,7 +82,26 @@ db.exec(`
 `);
 
 // ─── DATABASE MIGRATION (Ensure new columns exist) ───────────────────────────
-try { db.exec("ALTER TABLE applications ADD COLUMN financial_proof_path TEXT;"); } catch(e) {}
+const columnsToAdd = [
+  "financial_proof_path TEXT",
+  "pitch_deck_url TEXT",
+  "full_data TEXT",
+  "declaration_agreed INTEGER DEFAULT 0",
+  "file_path TEXT",
+  "plan_to_grow TEXT",
+  "services_needed TEXT",
+  "financial_support TEXT",
+  "incubation_support TEXT",
+  "incubation_duration TEXT",
+  "association_type TEXT",
+  "incubation_help TEXT"
+];
+
+columnsToAdd.forEach(colData => {
+  try {
+    db.prepare(`ALTER TABLE applications ADD COLUMN ${colData}`).run();
+  } catch (e) { /* Column already exists, ignore */ }
+});
 
 // Seed default site settings
 const defaultSettings = [
@@ -318,7 +337,7 @@ app.delete('/api/applications/:id', requireAuth, (req, res) => {
 
 // Advanced Migration & Sync Logic
 try {
-  // Ensure pitch_deck_url column exists in applications
+  // Ensure pitch_deck_url column exists in applications (now handled in main migration above, but keeping for safety)
   try { db.prepare("ALTER TABLE applications ADD COLUMN pitch_deck_url TEXT").run(); } catch(e){}
 
   // Sync Validation Rules from current requirements across all form fields
@@ -356,9 +375,7 @@ try {
   console.error("Migration error:", err);
 }
 
-try {
-  db.prepare('ALTER TABLE applications ADD COLUMN full_data TEXT').run();
-} catch (e) { /* exists */ }
+// Removed duplicated full_data migration since it's handled globally above.
 
 // Get all settings (public — used by form page)
 app.get('/api/settings', (req, res) => {
