@@ -379,6 +379,12 @@ function openFieldModal(id) {
     document.getElementById('fld_width').value = f.column_width || '12';
     document.getElementById('fld_required').checked = !!f.required;
     document.getElementById('fld_active').checked = !!f.is_active;
+    
+    // Process validation rules
+    let rules = {}; try { rules = JSON.parse(f.validation_rules || '{}'); } catch(e){}
+    document.getElementById('fld_limit_words').value = rules.max_words || '';
+    document.getElementById('fld_limit_size').value = rules.max_size_mb || '';
+
     document.getElementById('row_field_name').style.display = 'none'; // can't change name of existing
     toggleOptionsRow();
   }
@@ -393,6 +399,10 @@ function toggleOptionsRow() {
   const t = document.getElementById('fld_type').value;
   const showOpts = ['select','checkbox','radio'].includes(t);
   document.getElementById('row_options').style.display = showOpts ? '' : 'none';
+  
+  // Toggle Validation Rows
+  document.getElementById('row_validation_textarea').style.display = ['text','textarea'].includes(t) ? '' : 'none';
+  document.getElementById('row_validation_file').style.display = (t === 'file') ? '' : 'none';
 }
 
 async function saveField() {
@@ -417,6 +427,19 @@ async function saveField() {
     required: document.getElementById('fld_required').checked ? 1 : 0,
     is_active: document.getElementById('fld_active').checked ? 1 : 0,
   };
+
+  // Build validation rules JSON
+  const rules = {};
+  if (payload.field_type === 'textarea' || payload.field_type === 'text') {
+    const mw = parseInt(document.getElementById('fld_limit_words').value);
+    if (mw) rules.max_words = mw;
+  }
+  if (payload.field_type === 'file') {
+    const ms = parseInt(document.getElementById('fld_limit_size').value);
+    if (ms) rules.max_size_mb = ms;
+    rules.allowed_ext = 'pdf'; // defaulting to PDF based on user request
+  }
+  payload.validation_rules = Object.keys(rules).length > 0 ? JSON.stringify(rules) : null;
 
   if (!payload.label) { showToast('Label is required'); return; }
   if (!id && !payload.field_name) { showToast('Please enter a valid field label'); return; }

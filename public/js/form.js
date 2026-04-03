@@ -36,7 +36,7 @@ async function loadDynamicFields() {
     // Add cache buster to ensure latest changes are fetched
     const res = await fetch('/api/form-fields?t=' + Date.now());
     dynamicFieldsConfig = await res.json();
-    
+
     // Sort by step FIRST, then sort_order SECOND (Crucial Fix)
     dynamicFieldsConfig.sort((a, b) => (a.step - b.step) || (a.sort_order - b.sort_order));
 
@@ -50,33 +50,13 @@ async function loadDynamicFields() {
     for (let s = 1; s <= 3; s++) {
       const container = id(`dynamicFieldsStep${s}`);
       if (!container) continue;
-      
+
       let html = stepsGroup[s].map(f => renderField(f)).join('');
 
-      // Step 2 pitch deck - special fixed field
-      if (s === 2) {
-        html += `
-          <div class="col-12 mt-3">
-            <div class="premium-field">
-              <label>Upload your pitch deck (PDF) <span class="required-star">*</span></label>
-              <div class="file-premium-zone mt-2" id="fileUploadZone">
-                <div class="p-4 border rounded-3 text-center transition-all bg-light">
-                  <div class="icon-circle mb-3 mx-auto">📎</div>
-                  <p class="mb-1 fw-medium">Upload Pitchdeck (PDF)</p>
-                  <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Choose File</button>
-                </div>
-                <input type="file" id="startup_file" name="startup_file" class="d-none" accept=".pdf" />
-                <div id="fileName" class="text-center mt-2 small fw-bold text-maroon">No file chosen</div>
-                <div class="error-msg text-center mt-1" id="err_startup_file"></div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-      
+
       // Step 3 services - special fixed field
       // Step 3 services - removed to avoid duplication with dynamic form builder
-      
+
       container.innerHTML = html;
     }
   } catch (e) { console.error('Dynamic fields load error', e); }
@@ -97,6 +77,20 @@ function renderField(f) {
       <option value="" disabled selected>${f.placeholder || 'Select...'}</option>
       ${opts}
     </select>`;
+  } else if (f.field_type === 'file') {
+    inputHtml = `
+      <div class="file-premium-zone mt-2" onclick="document.getElementById('${f.field_name}').click()">
+        <div class="p-4 border rounded-4 text-center transition-all bg-light hover-shadow-sm" style="transition: 1s;">
+          <div class="icon-circle mb-3 mx-auto shadow-sm" style="width: 45px; height: 45px; background: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #eee;">
+            <i class="fas fa-file-upload text-maroon opacity-75"></i>
+          </div>
+          <p class="mb-1 fw-bold small text-uppercase opacity-75">Upload Document</p>
+          <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2">Choose File</button>
+        </div>
+        <input type="file" name="${f.field_name}" id="${f.field_name}" class="d-none" ${reqAttr} 
+          onchange="document.getElementById('${f.field_name}_filename').textContent = this.files[0]?.name || '${f.placeholder || 'No file chosen'}'" />
+        <div id="${f.field_name}_filename" class="text-center mt-2 small fw-bold text-maroon">${f.placeholder || 'No file chosen'}</div>
+      </div>`;
   } else if (f.field_type === 'radio' || f.field_type === 'checkbox') {
     const opts = (f.options || '').split(';').map(o => o.trim());
     const inputType = f.field_type;
@@ -111,11 +105,11 @@ function renderField(f) {
       } else if (lowName.includes('incubation') || lowLabel.includes('incubator') || lowLabel.includes('accelerator')) {
         onchangeAttr = `onchange="toggleIncubationSupport(this.value)"`;
       }
-      
+
       // Consistent 3-column layout for services as requested
-      let itemColClass = 'col-md-4'; 
+      let itemColClass = 'col-md-4';
       if (lowName.includes('services') || lowLabel.includes('services')) {
-        itemColClass = 'col-md-4'; 
+        itemColClass = 'col-md-4';
       } else if (f.field_type === 'radio') {
         itemColClass = 'col-md-6';
       }
@@ -129,9 +123,9 @@ function renderField(f) {
         </div>
       `;
     }).join('');
-    
+
     inputHtml = `<div class="row g-3 mt-1">${itemsHtml}</div>`;
-    
+
     const lowLabel = (f.label || '').toLowerCase();
     const lowName = (f.field_name || '').toLowerCase();
 
@@ -169,12 +163,26 @@ function renderField(f) {
 
   const colWidth = f.column_width || (['textarea', 'radio', 'checkbox'].includes(f.field_type) ? 12 : 6);
   const colClass = `col-md-${colWidth}`;
-  
+
+  const labelTag = f.field_type === 'file'
+    ? `<label class="mb-2 fw-bold text-uppercase opacity-75 small">${f.label} ${star}</label>`
+    : `<label for="${f.field_name}">${f.label} ${star}</label>`;
+
+  let hintHtml = '';
+  if (f.validation_rules) {
+    try {
+      const rules = JSON.parse(f.validation_rules);
+      if (rules.max_words) hintHtml = `<div class="rule-hint">Word limit: ${rules.max_words} words</div>`;
+      if (rules.max_size_mb) hintHtml = `<div class="rule-hint">Allowed: ${rules.allowed_ext || 'files'}, Max: ${rules.max_size_mb}MB</div>`;
+    } catch(e){}
+  }
+
   return `
     <div class="${colClass} mb-3">
       <div class="premium-field">
-        <label for="${f.field_name}">${f.label} ${star}</label>
+        ${labelTag}
         ${inputHtml}
+        ${hintHtml}
         <div class="error-msg" id="err_${f.field_name}"></div>
       </div>
     </div>`;
@@ -223,7 +231,7 @@ function initFormLogic() {
     }
     progressBar.style.width = `${(currentStep / totalSteps) * 100}%`;
     currentStepText.textContent = currentStep;
-    
+
     // Update sticky header title
     const ftitle = id('formTitle');
     const fsub = id('formSubtitle');
@@ -236,20 +244,13 @@ function initFormLogic() {
         fsub.textContent = stepTitles[currentStep].subtitle;
       }
     }
-    
+
     document.querySelector('.form-container-scroll').scrollTop = 0;
   }
 
   nextBtn.addEventListener('click', () => { if (validateStep(currentStep)) { currentStep++; updateStep(); } });
   prevBtn.addEventListener('click', () => { if (currentStep > 1) { currentStep--; updateStep(); } });
 
-  const fileInput = id('startup_file');
-  const fileName = id('fileName');
-  const fileZone = id('fileUploadZone');
-  if (fileInput && fileZone) {
-    fileZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', () => { fileName.textContent = fileInput.files[0]?.name || 'No file chosen'; });
-  }
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -259,9 +260,16 @@ function initFormLogic() {
     try {
       const res = await fetch('/api/apply', { method: 'POST', body: new FormData(form) });
       const data = await res.json();
-      if (data.success) { id('successModal').classList.add('active'); form.reset(); }
-      else alert(data.message);
-    } catch (err) { alert('Network error'); }
+      if (data.success) { 
+        id('successModal').classList.add('active'); 
+        form.reset(); 
+      } else {
+        alert(data.message || 'Submission failed');
+      }
+    } catch (err) { 
+      console.error('Submission error:', err);
+      alert('Network error: ' + err.message); 
+    }
     finally { submitBtn.disabled = false; submitBtn.textContent = 'Finish & Submit'; }
   });
 
@@ -271,19 +279,29 @@ function initFormLogic() {
     if (sNum <= 3) {
       const stepFields = dynamicFieldsConfig.filter(f => f.step === sNum && f.required);
       stepFields.forEach(f => {
-        const el = id(f.field_name);
+        const el = (f.field_type === 'radio' || f.field_type === 'checkbox') ? document.querySelector(`input[name="${f.field_name}"]`) : id(f.field_name);
         if (!el) return;
-        
-        let val = el.value.trim();
-        
-        // 1. Required Check
-        if (!val) {
+
+        let val = el.value ? el.value.trim() : '';
+
+        // 1. Required Check - Enhanced for Radios/Checkboxes/Files
+        let hasValue = false;
+        if (f.field_type === 'radio' || f.field_type === 'checkbox') {
+          hasValue = !!document.querySelector(`input[name="${f.field_name}"]:checked`);
+        } else if (f.field_type === 'file') {
+          hasValue = !!el.files?.[0];
+        } else {
+          hasValue = !!val;
+        }
+
+        if (!hasValue) {
           isValid = false;
           showError(`err_${f.field_name}`, 'This field is required');
-          el.classList.add('error');
+          const errEl = (f.field_type === 'file') ? el.parentElement : el;
+          errEl.classList.add('error');
           return;
         }
-        
+
         // 2. Format Validation
         if (f.field_type === 'email') {
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -292,9 +310,8 @@ function initFormLogic() {
             showError(`err_${f.field_name}`, 'Please enter a valid email address');
             el.classList.add('error');
           }
-        } 
+        }
         else if (f.field_type === 'tel') {
-          // Allow spaces, +, - and digits. Typically 10 to 15 numbers long
           const phonePattern = /^[+\d\s-]{10,15}$/;
           if (!phonePattern.test(val)) {
             isValid = false;
@@ -302,29 +319,47 @@ function initFormLogic() {
             el.classList.add('error');
           }
         }
+
+        // 3. Dynamic Validation Rules
+        if (f.validation_rules) {
+          try {
+            const rules = JSON.parse(f.validation_rules);
+            // Textarea Word Count
+            if (f.field_type === 'textarea' && rules.max_words) {
+              const words = val.trim().split(/\s+/).filter(w => w.length > 0).length;
+              if (words > rules.max_words) {
+                isValid = false;
+                showError(`err_${f.field_name}`, `Please limit to ${rules.max_words} words (Current: ${words})`);
+                el.classList.add('error');
+              }
+            }
+            // File Validation
+            if (f.field_type === 'file' && el.files[0]) {
+              const file = el.files[0];
+              if (rules.allowed_ext === 'pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                isValid = false; showError(`err_${f.field_name}`, 'Only PDF files are allowed');
+                el.parentElement.classList.add('error');
+              }
+              if (rules.max_size_mb && file.size > rules.max_size_mb * 1024 * 1024) {
+                isValid = false; showError(`err_${f.field_name}`, `File size must be less than ${rules.max_size_mb}MB`);
+                el.parentElement.classList.add('error');
+              }
+            }
+          } catch(e){}
+        }
       });
 
-      if (sNum === 2) {
-        const fileInp = id('startup_file');
-        if (!fileInp.files[0]) {
-          isValid = false; showError('err_startup_file', 'Please upload your pitchdeck (PDF)');
-        } else if (fileInp.files[0].type !== 'application/pdf' && !fileInp.files[0].name.toLowerCase().endsWith('.pdf')) {
-          isValid = false; showError('err_startup_file', 'Only PDF files are allowed');
-        } else if (fileInp.files[0].size > 10 * 1024 * 1024) {
-          isValid = false; showError('err_startup_file', 'File size must be less than 10MB');
-        }
-      }
       if (sNum === 3) {
         if (!document.querySelector('input[name="services_needed"]:checked')) {
           isValid = false; showError('err_services', 'Please select at least one service');
         }
-        
+
         // Dynamic conditional validation based on keywords
         dynamicFieldsConfig.filter(f => f.step === 3).forEach(f => {
           const lowLabel = (f.label || '').toLowerCase();
           const lowName = (f.field_name || '').toLowerCase();
           const val = document.querySelector(`input[name="${f.field_name}"]:checked`)?.value?.toLowerCase();
-          
+
           if (val === 'yes') {
             if (lowName.includes('financial') || lowLabel.includes('financial support')) {
               const proofInp = id('financial_proof');
@@ -342,7 +377,7 @@ function initFormLogic() {
               }
             }
           }
-          
+
           // Always validate "Services" field if label contains 'services'
           if (lowLabel.includes('services') && f.field_type === 'checkbox') {
             if (!document.querySelector(`input[name="${f.field_name}"]:checked`)) {
@@ -358,9 +393,9 @@ function initFormLogic() {
       const d2 = id('decl2')?.checked;
       const d3 = id('decl3')?.checked;
       const d4 = id('decl4')?.checked;
-      if (!d1 || !d2 || !d3 || !d4) { 
-        isValid = false; 
-        showError('err_declaration', 'Please accept all declarations to proceed'); 
+      if (!d1 || !d2 || !d3 || !d4) {
+        isValid = false;
+        showError('err_declaration', 'Please accept all declarations to proceed');
       }
     }
     return isValid;

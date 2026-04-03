@@ -685,3 +685,39 @@ h4,
 .financial-proof-zone .required-star {
   font-size: 14px;
 }
+.text-maroon {
+  color: #751421 !important;
+}
+
+.bg-light {
+  background-color: #f8fafc !important;
+}
+
+.hover-shadow-sm:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border-color: #751421 !important;
+  cursor: pointer;
+}
+
+.extra-small {
+  font-size: 10px;
+}
+
+.file-premium-zone {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.file-premium-zone:active {
+  transform: scale(0.98);
+}
+
+
+.rule-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+

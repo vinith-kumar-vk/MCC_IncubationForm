@@ -109,7 +109,8 @@ try {
       [1, 'tel', 'whatsapp', 'WhatsApp Number', '+91-0000000000', 1, null, 3, 6],
       [1, 'textarea', 'address', 'Correspondence Address', 'Full postal address', 1, null, 4, 12],
       [1, 'select', 'professional_status', 'Current Professional Status', 'Select your current status', 1, 'Student,Working professional,Entrepreneur,Faculty or Alumni of MCC', 5, 6],
-      [2, 'text', 'startup_name', 'Name of Startup / Idea', 'Name of your venture', 1, null, 1, 6],
+      [2, 'text', 'startup_name', 'Name of Startup / Project Title', 'Entity name', 1, null, 1, 6],
+      [2, 'textarea', 'idea_description', 'Brief Description of your Idea', 'What does your startup do?', 1, null, 2, 12],
       [3, 'radio', 'financial_support', 'Has your startup received any financial support?', '', 1, 'Yes; No', 1, 6],
       [3, 'radio', 'incubation_status', 'Have you joined any incubator / accelerator program earlier?', '', 1, 'Yes; No', 2, 6],
       [3, 'checkbox', 'services_needed', 'Please select the incubation services that you need:', '', 1, 'Office Space; Mentor Support; Market Access; Lab Equipment & Technical Access; Professional Business Services (IP, Auditing, etc); Fundraising Assistance', 3, 12],
@@ -148,30 +149,42 @@ const requireAuth = (req, res, next) => {
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 
 // Submit application form
-app.post('/api/apply', upload.fields([
-  { name: 'startup_file', maxCount: 1 },
-  { name: 'financial_proof', maxCount: 1 }
-]), (req, res) => {
+app.post('/api/apply', upload.any(), (req, res) => {
   try {
+    console.log('--- POST /api/apply Received ---');
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('Files:', req.files ? req.files.length : 0);
+
     const {
       applicant_name, startup_name, address, email, whatsapp,
-      professional_status, plan_to_grow, financial_support,
+      professional_status, idea_description, plan_to_grow, financial_support,
       incubation_status, incubation_duration, association_type,
       incubation_help, declaration_agreed
     } = req.body;
+
+    const final_idea_description = plan_to_grow || idea_description || 'N/A';
 
     const services_needed = Array.isArray(req.body.services_needed)
       ? req.body.services_needed.join(', ')
       : (req.body.services_needed || '');
 
-    const file_path = req.files && req.files['startup_file'] ? '/uploads/' + req.files['startup_file'][0].filename : null;
-    const financial_proof_path = req.files && req.files['financial_proof'] ? '/uploads/' + req.files['financial_proof'][0].filename : null;
+    // Collect all uploaded file paths
+    const fileData = {};
+    if (req.files) {
+      req.files.forEach(f => {
+        fileData[f.fieldname] = '/uploads/' + f.filename;
+      });
+    }
+
+    const file_path = fileData['startup_file'] || null;
+    const financial_proof_path = fileData['financial_proof'] || null;
     
+    // Merge file paths into full_data
+    const full_data = JSON.stringify({ ...req.body, ...fileData }); 
+
     // Support either incubation_status or incubation_support depending on form label
     const incubationVar = req.body.incubation_status || req.body.incubation_support || '';
     
-    const full_data = JSON.stringify(req.body); 
-
     db.prepare(`
       INSERT INTO applications
       (applicant_name, startup_name, address, email, whatsapp, professional_status,
@@ -180,14 +193,14 @@ app.post('/api/apply', upload.fields([
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       applicant_name || 'N/A', startup_name || 'N/A', address || 'N/A', email || 'N/A', whatsapp || 'N/A', professional_status || 'N/A',
-      plan_to_grow, services_needed, financial_support, incubationVar,
-      incubation_duration, association_type, incubation_help, file_path, financial_proof_path,
+      final_idea_description, services_needed || null, financial_support || null, incubationVar || null,
+      incubation_duration || null, association_type || null, incubation_help || null, file_path, financial_proof_path,
       declaration_agreed ? 1 : 0, full_data
     );
 
     res.json({ success: true, message: 'Application submitted successfully!' });
   } catch (err) {
-    console.error(err);
+    console.error('SUBMIT ERROR:', err);
     res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 });
@@ -350,10 +363,10 @@ app.get('/api/admin/form-fields', (req, res) => {
 
 // Create new field
 app.post('/api/admin/form-fields', (req, res) => {
-  const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width } = req.body;
+  const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width, validation_rules } = req.body;
   const defWidth = column_width || (field_type === 'textarea' || field_type === 'checkbox' || field_type === 'radio' ? 12 : 6);
-  const stmt = db.prepare('INSERT INTO form_fields (step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const result = stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, defWidth);
+  const stmt = db.prepare('INSERT INTO form_fields (step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width, validation_rules) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const result = stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, defWidth, validation_rules);
   res.json({ success: true, id: result.lastInsertRowid });
 });
 
@@ -390,17 +403,27 @@ app.delete('/api/admin/form-fields/:id', requireAuth, (req, res) => {
 
 // Update field
 app.put('/api/admin/form-fields/:id', requireAuth, (req, res) => {
-  const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width } = req.body;
-  const stmt = db.prepare('UPDATE form_fields SET step = ?, field_type = ?, field_name = ?, label = ?, placeholder = ?, options = ?, sort_order = ?, required = ?, is_active = ?, column_width = ? WHERE id = ?');
-  stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width || 12, req.params.id);
+  const { step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width, validation_rules } = req.body;
+  const stmt = db.prepare('UPDATE form_fields SET step = ?, field_type = ?, field_name = ?, label = ?, placeholder = ?, options = ?, sort_order = ?, required = ?, is_active = ?, column_width = ?, validation_rules = ? WHERE id = ?');
+  stmt.run(step, field_type, field_name, label, placeholder, options, sort_order, required, is_active, column_width || 12, validation_rules, req.params.id);
   res.json({ success: true });
 });
 
-// CloudPanel-compatible listen logic - Using 3103 consistently
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ GLOBAL APP ERROR:', err);
+  res.status(500).json({ 
+    success: false, 
+    message: 'Server internal error. Please check logs.',
+    error: err.message 
+  });
+});
+
+// CloudPanel-compatible listen logic - Using 3105 consistently
 try {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 MCC-MRF Incubation System Successfully Running on port: ${PORT}`);
-    console.log(`📋 Form Link: http://applyincubation.mccmrfip.in/index.html`);
+    console.log(`📋 Form Link: http://localhost:${PORT}/index.html`);
   });
 } catch (error) {
   console.error('FAILED TO START SERVER:', error);
