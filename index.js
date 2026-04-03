@@ -228,10 +228,10 @@ app.post('/api/apply', upload.any(), (req, res) => {
     res.json({ success: true, message: 'Application submitted successfully!' });
   } catch (err) {
     console.error('CRITICAL SUBMIT ERROR:', err);
-    res.status(500).json({ 
+    res.status(200).json({ 
       success: false, 
       message: 'Submission failed: ' + err.message,
-      stack: err.stack
+      error_details: err.stack
     });
   }
 });
@@ -474,9 +474,9 @@ app.put('/api/admin/form-fields/:id', requireAuth, (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ GLOBAL APP ERROR:', err);
-  res.status(500).json({ 
+  res.status(200).json({ 
     success: false, 
-    message: 'Server internal error. Please check logs.',
+    message: 'Server internal error (Middleware).',
     error: err.message 
   });
 });
