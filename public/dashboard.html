@@ -386,8 +386,14 @@
         <div style="display:flex; flex-direction:column; gap:12px;">
           <div style="display:flex; gap:10px;">
             <div style="flex:1;">
-              <label>Max File Size (MB)</label>
-              <input type="number" id="fld_limit_size" class="cms-input" placeholder="e.g. 10">
+              <label>Max Size</label>
+              <div style="display:flex; gap:5px;">
+                <input type="number" id="fld_limit_size" class="cms-input" style="flex:1;" placeholder="10">
+                <select id="fld_size_unit" class="cms-input" style="width:70px; padding:5px;">
+                  <option value="MB">MB</option>
+                  <option value="KB">KB</option>
+                </select>
+              </div>
             </div>
             <div style="flex:1;">
               <label>Allowed Ext (e.g. pdf,jpg)</label>

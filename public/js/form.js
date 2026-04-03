@@ -68,7 +68,15 @@ function renderField(f) {
   let inputHtml = '';
 
   if (['text', 'email', 'tel', 'number', 'date', 'url'].includes(f.field_type)) {
-    inputHtml = `<input type="${f.field_type}" class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" placeholder="${f.placeholder || ''}" ${reqAttr} />`;
+    let counterHtml = '';
+    let rules = {};
+    if (f.validation_rules) {
+      try { rules = JSON.parse(f.validation_rules); } catch(e){}
+    }
+    if (rules.max_words) {
+      counterHtml = `<div id="counter_${f.field_name}" class="mt-1 small opacity-75 text-end">0 / ${rules.max_words} words</div>`;
+    }
+    inputHtml = `<input type="${f.field_type}" class="form-control premium-input" name="${f.field_name}" id="${f.field_name}" placeholder="${f.placeholder || ''}" ${reqAttr} oninput="updateWordCount('${f.field_name}', ${rules.max_words || 0})" />${counterHtml}`;
   } else if (f.field_type === 'textarea') {
     let counterHtml = '';
     let rules = {};
@@ -91,10 +99,11 @@ function renderField(f) {
   } else if (f.field_type === 'file') {
     let rules = {}; try { rules = JSON.parse(f.validation_rules || '{}'); } catch(e){}
     const allowUrl = !!rules.allow_url;
-    const maxSize = rules.max_size_mb || 5;
+    const maxSize = rules.max_size || 5;
+    const sizeUnit = rules.size_unit || 'MB';
     const customHint = rules.custom_hint || '';
     const labelUpper = (f.label || "").toUpperCase();
-    const restrictionText = `Allowed: ${rules.allowed_ext || 'PDF'} ${allowUrl ? 'or Website Link' : ''}, Max: ${maxSize}MB ${customHint ? '('+customHint+')' : ''}`;
+    const restrictionText = `Allowed: ${rules.allowed_ext || 'PDF'} ${allowUrl ? 'or Website Link' : ''}, Max: ${maxSize}${sizeUnit} ${customHint ? '('+customHint+')' : ''}`;
     
     inputHtml = `
       <div class="file-premium-zone mt-2" onclick="document.getElementById('${f.field_name}').click()">
@@ -468,6 +477,41 @@ function initFormLogic() {
 function closeModal() { id('successModal').classList.remove('active'); window.location.reload(); }
 
 
+function handleFileSelection(fieldName, input) {
+  const file = input.files[0];
+  const filenameDisplay = id(`${fieldName}_filename`);
+  const urlInput = id(`${fieldName}_url`);
+  
+  if (!file) return;
+
+  const fieldConfig = dynamicFieldsConfig.find(f => f.field_name === fieldName);
+  let rules = {}; try { rules = JSON.parse(fieldConfig.validation_rules || '{}'); } catch(e){}
+  
+  const unit = rules.size_unit || 'MB';
+  const sizeVal = parseFloat(rules.max_size) || 5;
+  const maxSizeInBytes = (unit === 'KB') ? sizeVal * 1024 : sizeVal * 1024 * 1024;
+  
+  if (file.size > maxSizeInBytes) {
+    alert(`File is too large. Max allowed size is ${sizeVal}${unit}.`);
+    input.value = '';
+    if (filenameDisplay) filenameDisplay.textContent = 'No file chosen';
+    return;
+  }
+
+  if (filenameDisplay) filenameDisplay.textContent = file.name;
+  if (urlInput) { urlInput.value = ''; urlInput.classList.remove('is-invalid'); }
+}
+
+function handleUrlInput(fieldName) {
+  const urlInput = id(`${fieldName}_url`);
+  const fileInput = id(fieldName);
+  const filenameDisplay = id(`${fieldName}_filename`);
+  if (urlInput && urlInput.value.trim() !== '') {
+    if (fileInput) fileInput.value = '';
+    if (filenameDisplay) filenameDisplay.textContent = 'URL provided';
+  }
+}
+
 function updateWordCount(fieldName, maxWords) {
   if (!maxWords) return;
   const el = id(fieldName);
@@ -479,58 +523,12 @@ function updateWordCount(fieldName, maxWords) {
   let wordsCount = wordsArray.length;
   
   if (wordsCount > maxWords) {
-    // Strictly truncate to maxWords
     const truncatedText = wordsArray.slice(0, maxWords).join(' ');
     el.value = truncatedText;
     wordsCount = maxWords;
   }
   
   counter.innerText = `${wordsCount} / ${maxWords} words`;
-  
-  if (wordsCount >= maxWords) {
-    counter.classList.add('text-danger', 'fw-bold');
-  } else {
-    counter.classList.remove('text-danger', 'fw-bold');
-  }
-}
-
-function handleFileSelection(fieldName, input) {
-  const file = input.files[0];
-  const filenameDisplay = id(`${fieldName}_filename`);
-  const urlInput = id(`${fieldName}_url`);
-  
-  if (!file) return;
-
-  // Get dynamic max size if possible, default to 5
-  const fieldConfig = dynamicFieldsConfig.find(f => f.field_name === fieldName);
-  let rules = {}; try { rules = JSON.parse(fieldConfig.validation_rules || '{}'); } catch(e){}
-  const maxSizeMB = rules.max_size_mb || 5;
-  const maxSize = maxSizeMB * 1024 * 1024;
-  
-  if (file.size > maxSize) {
-    alert(`File is too large. Max allowed size is ${maxSizeMB}MB.`);
-    input.value = '';
-    if (filenameDisplay) filenameDisplay.textContent = 'No file chosen';
-    return;
-  }
-
-  if (filenameDisplay) filenameDisplay.textContent = file.name;
-  
-  // If user selects a file, clear the URL input
-  if (urlInput) {
-    urlInput.value = '';
-    urlInput.classList.remove('is-invalid');
-  }
-}
-
-function handleUrlInput(fieldName) {
-  const urlInput = id(`${fieldName}_url`);
-  const fileInput = id(fieldName);
-  const filenameDisplay = id(`${fieldName}_filename`);
-  
-  if (urlInput && urlInput.value.trim() !== '') {
-    // If user types a URL, clear the file input
-    if (fileInput) fileInput.value = '';
-    if (filenameDisplay) filenameDisplay.textContent = 'URL provided';
-  }
+  if (wordsCount >= maxWords) counter.classList.add('text-danger', 'fw-bold');
+  else counter.classList.remove('text-danger', 'fw-bold');
 }

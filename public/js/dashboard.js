@@ -383,7 +383,8 @@ function openFieldModal(id) {
     // Process validation rules
     let rules = {}; try { rules = JSON.parse(f.validation_rules || '{}'); } catch(e){}
     document.getElementById('fld_limit_words').value = rules.max_words || '';
-    document.getElementById('fld_limit_size').value = rules.max_size_mb || '';
+    document.getElementById('fld_limit_size').value = rules.max_size || '';
+    document.getElementById('fld_size_unit').value = rules.size_unit || 'MB';
     document.getElementById('fld_allowed_ext').value = rules.allowed_ext || 'pdf';
     document.getElementById('fld_custom_hint').value = rules.custom_hint || '';
     document.getElementById('fld_allow_url').checked = !!rules.allow_url;
@@ -438,8 +439,11 @@ async function saveField() {
     if (mw) rules.max_words = mw;
   }
   if (payload.field_type === 'file') {
-    const ms = parseInt(document.getElementById('fld_limit_size').value);
-    if (ms) rules.max_size_mb = ms;
+    const ms = parseFloat(document.getElementById('fld_limit_size').value);
+    if (ms) {
+      rules.max_size = ms;
+      rules.size_unit = document.getElementById('fld_size_unit').value;
+    }
     rules.allowed_ext = document.getElementById('fld_allowed_ext').value.trim() || 'pdf';
     rules.custom_hint = document.getElementById('fld_custom_hint').value.trim();
     rules.allow_url = document.getElementById('fld_allow_url').checked;
@@ -657,10 +661,18 @@ async function viewDetail(id) {
         // Skip rendering if value is empty or just a placeholder '-'
         if (!val || val === '-' || val === 'Not specified') return;
 
+        // Clean up file paths for PDF display
+        let displayVal = val;
+        if (typeof val === 'string' && val.startsWith('/uploads/')) {
+          const fileName = val.split('/').pop();
+          const dashIdx = fileName.indexOf('-');
+          displayVal = dashIdx !== -1 ? fileName.substring(dashIdx + 1) : fileName;
+        }
+
         tablesHtml += `
           <tr>
             <td class="field-label">${f.label.toUpperCase()}</td>
-            <td class="field-value">${esc(val)}</td>
+            <td class="field-value">${esc(displayVal)}</td>
           </tr>
         `;
       });
