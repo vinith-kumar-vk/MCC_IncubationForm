@@ -318,8 +318,20 @@ function initFormLogic() {
         let hasValue = false;
         if (f.field_type === 'radio' || f.field_type === 'checkbox') {
           hasValue = !!document.querySelector(`input[name="${f.field_name}"]:checked`);
+        // } else if (f.field_type === 'file') {
+        //   hasValue = !!el.files?.[0];
+        // }
         } else if (f.field_type === 'file') {
-          hasValue = !!el.files?.[0];
+
+            const file = el.files?.[0];
+
+            const urlInput = document.getElementById(`${f.field_name}_url`);
+
+            const urlVal = urlInput
+                ? urlInput.value.trim()
+                : '';
+
+            hasValue = !!file || !!urlVal;
         } else {
           hasValue = !!val;
         }
@@ -488,17 +500,53 @@ function handleFileSelection(fieldName, input) {
   }
 
   if (filenameDisplay) filenameDisplay.textContent = file.name;
-  if (urlInput) { urlInput.value = ''; urlInput.classList.remove('is-invalid'); }
+  if (urlInput) { urlInput.value = ''; urlInput.classList.remove('is-invalid'); urlInput.removeAttribute('required');}
 }
 
+// function handleUrlInput(fieldName) {
+//   const urlInput = id(`${fieldName}_url`);
+//   const fileInput = id(fieldName);
+//   const filenameDisplay = id(`${fieldName}_filename`);
+//   if (urlInput && urlInput.value.trim() !== '') {
+//     if (fileInput) fileInput.value = '';
+//     if (filenameDisplay) filenameDisplay.textContent = 'URL provided';
+//   }
+// }
+
 function handleUrlInput(fieldName) {
-  const urlInput = id(`${fieldName}_url`);
-  const fileInput = id(fieldName);
-  const filenameDisplay = id(`${fieldName}_filename`);
-  if (urlInput && urlInput.value.trim() !== '') {
-    if (fileInput) fileInput.value = '';
-    if (filenameDisplay) filenameDisplay.textContent = 'URL provided';
-  }
+
+    const urlInput = id(`${fieldName}_url`);
+    const fileInput = id(fieldName);
+    const filenameDisplay = id(`${fieldName}_filename`);
+
+    if (!urlInput) return;
+
+    if (urlInput && urlInput.value.trim() !== '') {
+
+        if (fileInput) {
+            fileInput.value = '';
+        }
+
+        if (filenameDisplay) {
+            filenameDisplay.textContent = 'URL provided';
+        }
+
+        const errEl = document.getElementById(`err_${fieldName}`);
+        if (errEl) {
+            errEl.textContent = '';
+        }
+        fileInput?.classList.remove('error');
+    } else {
+
+        // URL removed
+        // if (fileInput) {
+        //     fileInput.setAttribute('required', 'required');
+        // }
+
+        if (filenameDisplay) {
+            filenameDisplay.textContent = 'No file chosen';
+        }
+    }
 }
 
 function updateWordCount(fieldName, maxWords) {
