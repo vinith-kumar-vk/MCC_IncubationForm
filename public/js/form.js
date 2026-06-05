@@ -141,18 +141,23 @@ function renderField(f) {
       `;
     }
   } else if (f.field_type === 'radio' || f.field_type === 'checkbox') {
-    const opts = (f.options || '').split(';').map(o => o.trim());
+    const opts = (f.options || '').split(';').map(o => o.trim()).filter(Boolean);
     const inputType = f.field_type;
     const itemsHtml = opts.map((opt, i) => {
       const fieldId = `${f.field_name}_${i}`;
-      let onchangeAttr = '';
+      const isOtherOption = /\bother(s)?\b/i.test(opt);
+      const relatedInputId = `${fieldId}_other`;
       const lowLabel = (f.label || '').toLowerCase();
       const lowName = (f.field_name || '').toLowerCase();
+
+      const optionHandlers = [];
+      if (isOtherOption) optionHandlers.push(`toggleOtherOptionInput(this, '${relatedInputId}')`);
       if (lowName.includes('financial') || lowLabel.includes('financial support')) {
-        onchangeAttr = `onchange="toggleFinancialProof(this.value)"`;
+        optionHandlers.push(`toggleFinancialProof(this.value)`);
       } else if (lowName.includes('incubation') || lowLabel.includes('incubator') || lowLabel.includes('accelerator')) {
-        onchangeAttr = `onchange="toggleIncubationSupport(this.value)"`;
+        optionHandlers.push(`toggleIncubationSupport(this.value)`);
       }
+      const onchangeAttr = optionHandlers.length ? `onchange="${optionHandlers.join('; ')}"` : '';
 
       let itemColClass = 'col-md-4';
       if (lowName.includes('services') || lowLabel.includes('services')) {
@@ -161,11 +166,19 @@ function renderField(f) {
         itemColClass = 'col-md-6';
       }
 
+      const otherInputHtml = isOtherOption ? `
+            <input type="text" id="${relatedInputId}" class="form-control premium-input other-option-input mt-2 d-none"
+              placeholder="Please specify"
+              data-original-value="${opt}"
+              oninput="updateOtherOptionValue(this, '${fieldId}')" />
+          ` : '';
+
       return `
         <div class="${itemColClass}">
           <div class="premium-check-card">
-            <input type="${inputType}" name="${f.field_name}" value="${opt}" id="${fieldId}" ${reqAttr} ${onchangeAttr} />
+            <input type="${inputType}" name="${f.field_name}" value="${opt}" id="${fieldId}" ${reqAttr} ${isOtherOption ? 'data-is-other="true"' : ''} data-original-value="${opt}" ${onchangeAttr} />
             <label for="${fieldId}"><span>${opt}</span></label>
+            ${otherInputHtml}
           </div>
         </div>
       `;
@@ -568,6 +581,27 @@ function updateWordCount(fieldName, maxWords) {
   counter.innerText = `${wordsCount} / ${maxWords} words`;
   if (wordsCount >= maxWords) counter.classList.add('text-danger', 'fw-bold');
   else counter.classList.remove('text-danger', 'fw-bold');
+}
+
+function toggleOtherOptionInput(input, relatedInputId) {
+  const otherInput = id(relatedInputId);
+  if (!otherInput) return;
+  if (input.checked) {
+    otherInput.classList.remove('d-none');
+    otherInput.focus();
+    updateOtherOptionValue(otherInput, input.id);
+  } else {
+    otherInput.classList.add('d-none');
+    otherInput.value = '';
+    input.value = input.dataset.originalValue || 'Other';
+  }
+}
+
+function updateOtherOptionValue(textInput, fieldId) {
+  const optionInput = id(fieldId);
+  if (!optionInput) return;
+  const newValue = textInput.value.trim();
+  optionInput.value = newValue || textInput.dataset.originalValue || 'Other';
 }
 
 function id(name) { return document.getElementById(name); }
